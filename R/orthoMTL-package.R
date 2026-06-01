@@ -62,12 +62,13 @@
 #' The core optimisation problem is:
 #'
 #' \deqn{\min_W \frac{1}{2n}\|XW - Y\|^2_{obs} +
-#'   \frac{\lambda}{2}\sum_{i \neq j} K_{ij}|W_i^\top W_j| +
-#'   \frac{\lambda_1}{2}\sum_j K_{jj}\|W_j\|_1}
+#'   \lambda\left[\frac{1-\alpha}{2}\sum_{s,t} K_{st}|W_s^\top W_t| +
+#'   \alpha\|W\|_1\right]}
 #'
 #' where the loss is computed only on non-censored entries, \eqn{K} encodes
-#' task relationships, \eqn{\lambda} controls orthogonality, and
-#' \eqn{\lambda_1} controls sparsity.
+#' task relationships, \eqn{\lambda} controls the penalty strength, and
+#' \eqn{\alpha \in [0,1]} mixes the orthogonality penalty (\eqn{\alpha=0})
+#' with Lasso sparsity (\eqn{\alpha=1}).
 #'
 #' @section Getting Started:
 #' See \code{vignette("introduction", package = "orthoMTL")} for a complete
