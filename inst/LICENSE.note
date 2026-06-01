@@ -1,0 +1,6 @@
+YEAR: 2014-2026
+COPYRIGHT HOLDER: Kevin Vervier, Novartis Pharma AG
+
+This package incorporates and extends code from the 'orthopen'
+R package (https://github.com/kevinVervier/orthopen), originally
+authored by Kevin Vervier and licensed under GPL-3.

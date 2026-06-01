@@ -1,0 +1,60 @@
+citHeader(
+  "To cite the orthoMTL algorithm, use Vervier et al. (2014).",
+  "To cite the survival analysis extension, also cite the Annals of Oncology paper below."
+)
+
+bibentry(
+  bibtype  = "InProceedings",
+  title    = "On Learning Matrices with Orthogonal Columns or Disjoint Supports",
+  author   = c(
+    person("Kevin", "Vervier"),
+    person("Pierre", "Mahé"),
+    person("Alexandre", "d'Aspremont"),
+    person("Jean-Baptiste", "Veyrieras"),
+    person("Jean-Philippe", "Vert")
+  ),
+  booktitle = "Machine Learning and Knowledge Discovery in Databases (ECML-PKDD 2014)",
+  year      = "2014",
+  publisher = "Springer",
+  url       = "https://hal.science/hal-00985654",
+  textVersion = paste(
+    "Vervier, K., Mahé, P., d'Aspremont, A., Veyrieras, J.-B., & Vert, J.-P. (2014).",
+    "On Learning Matrices with Orthogonal Columns or Disjoint Supports.",
+    "In Machine Learning and Knowledge Discovery in Databases (ECML-PKDD 2014).",
+    "URL: https://hal.science/hal-00985654"
+  )
+)
+
+bibentry(
+  bibtype  = "Article",
+  title    = "Genomic Determinants of Response to Alpelisib Plus Fulvestrant in the SOLAR-1 Trial",
+  author   = c(
+    person("D.", "Juric"),
+    person("H. S.", "Rugo"),
+    person("A.", "Reising"),
+    person("K. ", "Vervier"),
+    person("C. ", "Ma"),
+    person("E. M. ", "Ciruelos"),
+    person("S.", "Loibl"),
+    person("C. F.", "Singer"),
+    person("J. ", "Sohn"),
+    person("M.", "Campone"),
+    person("P. ", "Conte"),
+    person("H. ", "Iwata"),
+    person("F. ", "Ghaznawi"),
+    person(" M. ", "Miller"),
+    person("T. ", "Taran"),
+    person("F. ", "Su"),
+    person("F.", "André")
+  ),
+  journal  = "Annals of Oncology",
+  year     = "2026",
+  doi      = "10.1016/j.annonc.2026.04.003",
+  url      = "https://doi.org/10.1016/j.annonc.2026.04.003",
+  textVersion = paste(
+    "Juric, D. (2026).",
+    "Genomic Determinants of Response to Alpelisib Plus Fulvestrant in the SOLAR-1 Trial",
+    "Annals of Oncology.",
+    "DOI: 10.1016/j.annonc.2026.04.003"
+  )
+)

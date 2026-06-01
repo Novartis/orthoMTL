@@ -1,0 +1,88 @@
+#' orthoMTL: Multi-Task Learning with Orthogonal Constraints
+#'
+#' @description
+#' Fits regularised multi-task learning models where relationships between
+#' tasks are controlled via orthogonality or disjoint-support constraints.
+#' Supports regression, classification, and censored survival data.
+#'
+#' @section Overview:
+#' orthoMTL implements a penalised multi-task learning framework where the
+#' columns of the coefficient matrix are encouraged to be orthogonal (or
+#' have disjoint supports). In survival mode, time-to-event data is
+#' converted into binary classification tasks at user-defined thresholds,
+#' with censored observations masked in the loss computation.
+#'
+#' The package is the successor to the \code{orthopen} package and extends
+#' it with survival analysis, elastic-net sparsity, cross-validation,
+#' bootstrap inference, and a visualisation suite.
+#'
+#' @section Key Functions:
+#' \strong{Modelling:}
+#' \itemize{
+#'   \item \code{\link{orthoMTL}} — Core solver (regression, classification,
+#'     survival)
+#'   \item \code{\link{predict.orthoMTL}} — Predictions with column alignment
+#'     and monotonicity projection
+#'   \item \code{\link{coef.orthoMTL}} — Extract coefficient matrix
+#' }
+#'
+#' \strong{Survival Utilities:}
+#' \itemize{
+#'   \item \code{\link{create_longitudinal_labels}} — Survival to binary
+#'     label conversion
+#'   \item \code{\link{create_indicator_matrix}} — Censoring indicator matrix
+#'   \item \code{\link{create_constraint_matrix}} — Diffusion constraint
+#'     matrix for temporal tasks
+#' }
+#'
+#' \strong{Cross-Validation and Inference:}
+#' \itemize{
+#'   \item \code{\link{cv_orthoMTL}} — Parallel hyperparameter grid search
+#'   \item \code{\link{bootstrap_orthoMTL}} — Bootstrap coefficient
+#'     variability and null comparison
+#'   \item \code{\link{cindex_mtl}} — Concordance index for multi-task
+#'     predictions
+#' }
+#'
+#' \strong{Visualisation:}
+#' \itemize{
+#'   \item \code{\link{plot_heatmap}} — Coefficient heatmap
+#'   \item \code{\link{plot_correlation}} — Task distance map
+#'   \item \code{\link{plot_prediction}} — Prediction swimmer plot
+#'   \item \code{\link{plot_bootstrap}} — Bootstrap real vs null comparison
+#' }
+#'
+#' \strong{Simulation:}
+#' \itemize{
+#'   \item \code{\link{simulate_mtl}} — Simulated survival data with
+#'     time-varying effects
+#' }
+#'
+#' @section Algorithm:
+#' The core optimisation problem is:
+#'
+#' \deqn{\min_W \frac{1}{2n}\|XW - Y\|^2_{obs} +
+#'   \frac{\lambda}{2}\sum_{i \neq j} K_{ij}|W_i^\top W_j| +
+#'   \frac{\lambda_1}{2}\sum_j K_{jj}\|W_j\|_1}
+#'
+#' where the loss is computed only on non-censored entries, \eqn{K} encodes
+#' task relationships, \eqn{\lambda} controls orthogonality, and
+#' \eqn{\lambda_1} controls sparsity.
+#'
+#' @section Getting Started:
+#' See \code{vignette("introduction", package = "orthoMTL")} for a complete
+#' worked example using simulated data.
+#'
+#' @references
+#' Vervier, K., Mahe, P., d'Aspremont, A., Veyrieras, J.-B., and
+#' Vert, J.-P. (2014). On Learning Matrices with Orthogonal Columns or
+#' Disjoint Supports. \emph{ECML-PKDD 2014}.
+#' \url{https://hal.science/hal-00985654}
+#'
+#' @aliases orthoMTL-package
+#' @importFrom stats coef predict
+#' @importFrom ggplot2 aes
+#' @importFrom rlang .data
+#' @importFrom stats coef predict rnorm rbeta rbinom rexp runif median
+#' @keywords internal
+"_PACKAGE"

@@ -1,0 +1,32 @@
+Package: orthoMTL
+Type: Package
+Title: Multitask learning with Orthogonal Constraints
+Version: 0.1.0
+Author: Kevin Vervier
+Maintainer: Kevin Vervier <kevin.vervier@novartis.com>
+Description: This package intends at fitting multitask learning models.
+    It implements a penalty with orthogonality constraints developed in Vervier et al., 2014.
+    Applications include (but not limited to) multiclass classification, as well as survival data.
+License: GPL-3 + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    parallel,
+    doParallel,
+    foreach,
+    ggplot2,
+    ggpubr,
+    dplyr,
+    base,
+    rlang
+VignetteBuilder: knitr
+Suggests:
+    knitr,
+    tibble,
+    glmnet,
+    testthat (>= 3.0.0),
+    survival,
+    rmarkdown
+RoxygenNote: 7.3.3
+Depends: 
+    R (>= 2.10)
