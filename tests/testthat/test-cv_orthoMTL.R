@@ -15,9 +15,9 @@ test_that("cv_orthoMTL returns S3 class with expected structure", {
 
   cv_res <- cv_orthoMTL(
     X.train = X, Y.train = Y, W.train = W, K = K,
-    lambdas = c(1e-3), lambdas1 = NULL,
+    lambdas = c(1e-3), alphas = 0,
     stepsizes = c(0.1), diag_vals = c(0.5),
-    survival = TRUE, disjoint = FALSE, enet = FALSE,
+    survival = TRUE, disjoint = FALSE,
     folds = folds, n_cores = 1, seed = 42, verbose = FALSE
   )
 
@@ -42,7 +42,7 @@ test_that("cv_orthoMTL best has all expected fields", {
     survival = FALSE, folds = folds, n_cores = 1, verbose = FALSE
   )
 
-  expect_true(all(c("lambda", "lambda1", "stepsize", "diag_val", "cv_score")
+  expect_true(all(c("lambda", "alpha", "stepsize", "diag_val", "cv_score")
                   %in% names(cv_res$best)))
 })
 
@@ -60,7 +60,7 @@ test_that("cv_orthoMTL searches multiple configurations", {
     survival = FALSE, folds = folds, n_cores = 1, verbose = FALSE
   )
 
-  # 2 lambdas x 2 stepsizes x 2 diag_vals x 1 lambda1 = 8
+  # 2 lambdas x 2 stepsizes x 2 diag_vals x 1 alpha = 8
   expect_equal(cv_res$n_configs, 8)
   expect_equal(nrow(cv_res$results), 8)
 

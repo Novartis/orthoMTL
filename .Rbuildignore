@@ -4,3 +4,6 @@
 ^data-raw$
 ^doc$
 ^Meta$
+^validation$
+^KANBAN\.md$
+^CLAUDE\.md$

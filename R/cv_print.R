@@ -24,7 +24,7 @@ print.cv_orthoMTL <- function(x, n_top = 5, ...) {
 
   cat("Best configuration:\n")
   cat("  lambda   =", x$best$lambda, "\n")
-  cat("  lambda1  =", x$best$lambda1, "\n")
+  cat("  alpha    =", x$best$alpha, "\n")
   cat("  stepsize =", x$best$stepsize, "\n")
   cat("  diag_val =", x$best$diag_val, "\n")
   cat("  CV C-index =", format(x$best$cv_score, digits = 4), "\n")

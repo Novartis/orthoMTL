@@ -9,8 +9,8 @@ This release represents a major refactor and scope expansion of the
 
 * **Survival analysis mode**: `survival` and `censored.mat` arguments
   in `orthoMTL()` enable censored time-to-event data.
-* **Elastic-net sparsity**: independent `lambda1` parameter for L1
-  regularisation on top of the orthogonal penalty.
+* **Elastic-net sparsity**: `alpha` mixing parameter in [0, 1] blending
+  the orthogonality penalty (`alpha = 0`) with L1/Lasso (`alpha = 1`).
 * **Survival data utilities**: `create_longitudinal_labels()`,
   `create_indicator_matrix()`, `create_constraint_matrix()`.
 * **Cross-validation**: `cv_optimization_foreach()` with parallel
@@ -26,16 +26,24 @@ This release represents a major refactor and scope expansion of the
 * Function renamed: `orthopen()` → `orthoMTL()`.
 * Return list key renamed: `$W` → `$B`.
 * Default `disjoint` changed from `TRUE` to `FALSE`.
-* Elastic-net `lambda1` is now an explicit scalar parameter
-  (was internally derived as a vector coupled to `diag(K)`).
+* Elastic-net is controlled by a single `alpha` mixing parameter in
+  [0, 1] (replacing the `enet`/`lambda1` pair). The penalty is
+  `lambda * [(1-alpha)/2 * Omega_K(W)^2 + alpha * ||W||_1]`, ported from
+  orthopen v1.1.0. This fixes the previous inconsistent mixing
+  (L2 ≈ 0.25*lambda vs L1 = 0.5*lambda1).
 * `Iso` package dependency removed; replaced by internal
   `nnmaxheap_C()`.
 
 ## Bug fixes
 
 * Variable `T` (masking `base::TRUE`) renamed to `numTasks`.
-* Input validation added for `X`, `Y`, `lambda`, `lambda1`.
+* Input validation added for `X`, `Y`, `lambda`, `alpha`.
 * Warning emitted when `max_iter` is reached without convergence.
+* **Logistic gradient corrected** for labels in {-1, +1} (ported from
+  orthopen v1.1.0): the gradient previously used the {0, 1} cross-entropy
+  form, which is wrong for `y = -1`.
+* **Logistic loss made overflow-safe** via the stable softplus identity
+  `max(-z,0) + log1p(exp(-|z|))` and exponent clipping in the gradient.
 
 ## Infrastructure
 

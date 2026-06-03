@@ -16,10 +16,9 @@
 #'   \code{numTasks x numTasks}. The diagonal will be overridden by
 #'   values in \code{diag_vals} during the search.
 #' @param lambdas A numeric vector of regularisation parameters to search.
-#' @param lambdas1 A numeric vector of elastic-net regularisation
-#'   parameters. Set to \code{NULL} if \code{enet = FALSE} (ignored).
-#'   If \code{enet = TRUE} and \code{NULL}, defaults to \code{lambdas}
-#'   with a warning.
+#' @param alphas A numeric vector of elastic-net mixing parameters in
+#'   \eqn{[0, 1]} to search. Default: \code{0} (pure orthogonality
+#'   penalty, no sparsity).
 #' @param stepsizes A numeric vector of gradient descent step sizes
 #'   to search.
 #' @param diag_vals A numeric vector of diagonal values for the
@@ -27,8 +26,6 @@
 #' @param survival Logical. Use censored survival loss? Default:
 #'   \code{TRUE}.
 #' @param disjoint Logical. Enforce disjoint supports? Default:
-#'   \code{FALSE}.
-#' @param enet Logical. Include elastic-net sparsity? Default:
 #'   \code{FALSE}.
 #' @param folds An integer vector of length \code{n} assigning each
 #'   training observation to a fold. If \code{NULL}, a 5-fold
@@ -43,7 +40,7 @@
 #' @return An object of class \code{"cv_orthoMTL"} containing:
 #'   \describe{
 #'     \item{best}{A list with the best hyperparameters: \code{lambda},
-#'       \code{lambda1}, \code{stepsize}, \code{diag_val}, and the
+#'       \code{alpha}, \code{stepsize}, \code{diag_val}, and the
 #'       corresponding \code{cv_score}.}
 #'     \item{results}{A \code{data.frame} of all configurations with
 #'       their mean CV C-index, sorted descending by \code{cv_score}.}
@@ -55,7 +52,7 @@
 #'
 #' @details
 #' The grid is constructed as the full Cartesian product of
-#' \code{lambdas}, \code{lambdas1}, \code{stepsizes}, and
+#' \code{lambdas}, \code{alphas}, \code{stepsizes}, and
 #' \code{diag_vals}. Each configuration is evaluated independently
 #' in parallel across cores. Within each configuration, folds are
 #' evaluated sequentially and the per-fold C-indices are averaged.
@@ -93,9 +90,9 @@
 #'
 #' cv_res <- cv_orthoMTL(
 #'   X.train = X, Y.train = Y, W.train = W, K = K,
-#'   lambdas = c(1e-3, 1e-2), lambdas1 = NULL,
+#'   lambdas = c(1e-3, 1e-2), alphas = 0,
 #'   stepsizes = c(0.1), diag_vals = c(0.5, 1),
-#'   survival = TRUE, disjoint = FALSE, enet = FALSE,
+#'   survival = TRUE, disjoint = FALSE,
 #'   folds = folds, n_cores = 1, seed = 42, verbose = TRUE
 #' )
 #'
@@ -104,12 +101,11 @@
 cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         K = NULL,
                         lambdas = c(1e-3, 1e-2),
-                        lambdas1 = NULL,
+                        alphas = 0,
                         stepsizes = c(0.1, 0.5),
                         diag_vals = c(0.5, 1),
                         survival = TRUE,
                         disjoint = FALSE,
-                        enet = FALSE,
                         folds = NULL,
                         n_cores = 2,
                         seed = 42,
@@ -162,16 +158,10 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
   n_folds <- length(unique_folds)
 
   # ---------------------------
-  # Elastic-net lambda1 handling
+  # Elastic-net mixing validation
   # ---------------------------
-  if (enet && is.null(lambdas1)) {
-    warning("enet = TRUE but lambdas1 not provided. ",
-            "Using lambdas1 = lambdas.", call. = FALSE)
-    lambdas1 <- lambdas
-  }
-  if (!enet) {
-    # Single dummy value — not searched, not used by orthoMTL
-    lambdas1 <- 0
+  if (any(alphas < 0 | alphas > 1)) {
+    stop("All 'alphas' must lie in [0, 1].", call. = FALSE)
   }
 
   # ---------------------------
@@ -179,7 +169,7 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
   # ---------------------------
   config_grid <- expand.grid(
     lambda   = lambdas,
-    lambda1  = lambdas1,
+    alpha    = alphas,
     stepsize = stepsizes,
     diag_val = diag_vals,
     stringsAsFactors = FALSE
@@ -220,9 +210,6 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
     K_local <- K
     diag(K_local) <- cfg$diag_val
 
-    # Determine lambda1 for this config
-    lambda1_cfg <- if (enet) cfg$lambda1 else NULL
-
     # Sequential fold loop
     fold_scores <- numeric(n_folds)
 
@@ -236,11 +223,10 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
         X            = X.train[idx_train, , drop = FALSE],
         Y            = Y.train[idx_train, , drop = FALSE],
         lambda       = cfg$lambda,
-        lambda1      = lambda1_cfg,
+        alpha        = cfg$alpha,
         step_size    = cfg$stepsize,
         K            = K_local,
         disjoint     = disjoint,
-        enet         = enet,
         survival     = survival,
         censored.mat = if (survival) W.train[idx_train, , drop = FALSE] else NULL,
         seed         = seed,
@@ -300,7 +286,7 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
     list(
       best = list(
         lambda   = best_cfg$lambda,
-        lambda1  = best_cfg$lambda1,
+        alpha    = best_cfg$alpha,
         stepsize = best_cfg$stepsize,
         diag_val = best_cfg$diag_val,
         cv_score = best_cfg$cv_score

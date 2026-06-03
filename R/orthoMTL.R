@@ -14,10 +14,12 @@
 #' @param K a constraint matrix of weights to adjust the OrthoPen penalty, default is an identity matrix with dimensions numTasks x numTasks
 #' @param disjoint a logical value indicating whether the response variables should have disjoint supports, default is FALSE
 #' @param logistic a logical value indicating whether logistic regression should be used instead of linear regression, default is FALSE
-#' @param enet a logical value indicating whether elastic net regularization should be used instead of L1 regularization, default is FALSE
+#' @param alpha the elastic-net mixing parameter in \eqn{[0, 1]}, default is 0.
+#'   The penalty is \eqn{\lambda [(1 - \alpha)/2\, \Omega_K(W)^2 + \alpha \|W\|_1]};
+#'   \code{alpha = 0} gives the pure orthogonality penalty and \code{alpha = 1}
+#'   gives a pure Lasso.
 #' @param survival a logical value indicating whether survival analysis should be performed, default is FALSE
 #' @param censored.mat a matrix indicating whether observations are censored, used only if survival=TRUE
-#' @param lambda1 the regularization parameter for the elastic-net penalty, default is NULL (lambda1 is set to lambda if enet is TRUE)
 #' @param tol Convergence tolerance. The algorithm stops when the
 #'   improvement in the objective function is less than \code{tol}.
 #'   Default: \code{1e-5}.
@@ -50,10 +52,6 @@
 #   Consider exposing as a parameter or offering alternative schedules.
 #   Investigate impact on convergence speed and final coefficients.
 
-# TODO(v1.1): Elastic-net weighting (0.5 L2 + 0.5 L1) is hardcoded.
-#   Consider exposing as a mixing parameter (alpha).
-#   Investigate impact on feature selection behaviour.
-
 # TODO(v1.1): stop_no_improve default (100) may be insufficient for
 #   high-dimensional or survival problems. Investigate on SOLAR-1 data.
 
@@ -66,7 +64,7 @@ orthoMTL <- function(X, Y, lambda = 1,
                      stop_no_improve = 100, max_iter = 1e+06,
                      W_0 = NULL, seed = 42,
                      K = NULL, disjoint = FALSE, logistic = FALSE,
-                     enet = FALSE, lambda1 = NULL,
+                     alpha = 0,
                      survival = FALSE, censored.mat = NULL,
                      verbose = 0){
   # initiate the random seed
@@ -105,10 +103,9 @@ orthoMTL <- function(X, Y, lambda = 1,
     V <- V_k
   }
 
-  # in the enet case, if lambda1 is not provided, it is set to be lambda
-  if (enet && is.null(lambda1)) lambda1 <- lambda
-  if (enet && !is.null(lambda1) && lambda1 < 0) {
-    stop("Regularization parameter lambda1 needs to be positive value", call. = FALSE)
+  # elastic-net mixing parameter must lie in [0, 1]
+  if (!is.numeric(alpha) || length(alpha) != 1L || alpha < 0 || alpha > 1) {
+    stop("Mixing parameter alpha must be a single number in [0, 1]", call. = FALSE)
   }
 
   # initiate variables tracking progress
@@ -135,11 +132,16 @@ orthoMTL <- function(X, Y, lambda = 1,
     #------------------#
 
     # loss pre-computation
+    # precompute the linear predictor once and reuse in loss and gradient
+    XW_k = X %*% W_k
     if (!logistic) {
-      LS = X %*% W_k - Y #MSE
+      LS = XW_k - Y #MSE
     }
     else {
-      LS = log(1 + exp(-Y * X %*% W_k)) # Logistic
+      # Numerically stable softplus: log(1+exp(-z)) = max(-z,0) + log1p(exp(-|z|))
+      # where z = Y * (X W). Avoids exp() overflow for large |z|. (REG-02)
+      score = Y * XW_k
+      LS = pmax(-score, 0) + log1p(exp(-abs(score))) # Logistic
     }
 
     # for survival analysis, the loss calculation is restricted to non-censored data
@@ -152,33 +154,26 @@ orthoMTL <- function(X, Y, lambda = 1,
     #compute a scale for gradient descent
     scale = sqrt(i)
 
-    # compute the dot product on the model
+    # orthogonality penalty matrix (V^T V for disjoint, W^T W otherwise)
     if (disjoint) {
       PEN = crossprod(V_k)
-      if (enet) M = V_k
+      W_or_V = V_k
     }else {
       PEN = crossprod(W_k)
-      if (enet) M = W_k
+      W_or_V = W_k
     }
 
-    # total loss calculation
+    # elastic-net penalty:
+    #   lambda * [ (1 - alpha)/2 * Omega_K(W)^2  +  alpha * ||W||_1 ]
+    # alpha = 0 -> pure orthogonality penalty; alpha = 1 -> pure Lasso.
+    pen_obj = (1 - alpha) / 2 * lambda * sum(abs(PEN) * K) +
+      alpha * lambda * sum(abs(W_or_V))
+
+    # total objective calculation
     if (!logistic) {
-      if (enet) {
-        tmp = 0.5 * (sum((LS)^2)/nrow(X) + 0.5 * lambda *
-                       sum(abs(PEN) * K)) + 0.5 * lambda1 * sum(abs(t(M)) *
-                                                                  diag(K))
-      }else {
-        tmp = 0.5 * (sum((LS)^2)/nrow(X) + lambda *
-                       sum(abs(PEN) * K))
-      }
+      tmp = 0.5 * sum(LS^2) / nrow(X) + pen_obj
     }else {
-      if (enet) {
-        tmp = sum(LS)/nrow(X) + 0.5 * lambda * sum(abs(PEN) *
-                                                     K) + 0.5 * lambda1 * sum(abs(t(M)) * diag(K))
-      }else {
-        tmp = sum(LS)/nrow(X) + 0.5 * lambda * sum(abs(PEN) *
-                                                     K)
-      }
+      tmp = sum(LS) / nrow(X) + pen_obj
     }
 
     # Previously: abs(tmp - new) > 10^-5
@@ -199,39 +194,28 @@ orthoMTL <- function(X, Y, lambda = 1,
     #----------------------#
 
     if (disjoint) {
+      # gradient of the data-fit term w.r.t. W
       if (!logistic) {
         gradientW <- crossprod(X, LS)/nrow(X)
       }else {
-        gradientW <- -crossprod(X, Y - 1/(1 + exp(-X %*%
-                                                    W_k)))/nrow(X)
+        # Correct subgradient for y in {-1,+1}: -X^T(y/(1+exp(y*Xw)))/m (REG-01)
+        gradientW <- -crossprod(X, Y/(1 + exp(pmin(Y * XW_k, 500))))/nrow(X)
       }
-      gradientV <- lambda * V_k %*% (sign(PEN) * K)
-      if (enet)
-        gradientV = 0.5 * gradientV + 0.5 * lambda1 *
-        sign(V_k)
+      # subgradient of the elastic-net penalty w.r.t. V
+      gradientV <- (1 - alpha) * lambda * V_k %*% (sign(PEN) * K) +
+        alpha * lambda * sign(V_k)
       norm_gradient <- sqrt(sum((gradientW + gradientV)^2))
     }else {
+      # subgradient of data-fit + elastic-net penalty w.r.t. W
       if (!logistic) {
-        if (enet) {
-          gradientW <- crossprod(X, LS)/nrow(X) + 0.5 *
-            lambda * W_k %*% (sign(PEN) * K) + 0.5 *
-            lambda1 * sign(W_k)
-        }else {
-          gradientW <- crossprod(X, LS)/nrow(X) + lambda *
-            W_k %*% (sign(PEN) * K)
-        }
+        gradientW <- crossprod(X, LS)/nrow(X) +
+          (1 - alpha) * lambda * W_k %*% (sign(PEN) * K) +
+          alpha * lambda * sign(W_k)
       }else {
-        if (enet) {
-          gradientW <- -crossprod(X, Y - 1/(1 + exp(-X %*%
-                                                      W_k)))/nrow(X) + lambda * W_k %*% (sign(PEN) *
-                                                                                           K) + 0.5 * lambda1 * sign(W_k)
-        }else {
-          gradientW <- -crossprod(X, Y - 1/(1 + exp(-X %*%
-                                                      W_k)))/nrow(X) + lambda * W_k %*% (sign(PEN) *
-                                                                                           K)
-        }
+        gradientW <- -crossprod(X, Y/(1 + exp(pmin(Y * XW_k, 500))))/nrow(X) +
+          (1 - alpha) * lambda * W_k %*% (sign(PEN) * K) +
+          alpha * lambda * sign(W_k)
       }
-      # compute gradient norm
       norm_gradient <- sqrt(sum((gradientW)^2))
     }
 
@@ -274,7 +258,7 @@ orthoMTL <- function(X, Y, lambda = 1,
       call           = match.call(),
       hyperparameters = list(
         lambda          = lambda,
-        lambda1         = lambda1,
+        alpha           = alpha,
         step_size       = step_size,
         tol             = tol,
         stop_no_improve = stop_no_improve,
@@ -282,7 +266,6 @@ orthoMTL <- function(X, Y, lambda = 1,
         seed            = seed,
         disjoint        = disjoint,
         logistic        = logistic,
-        enet            = enet,
         survival        = survival
       ),
       K              = K,

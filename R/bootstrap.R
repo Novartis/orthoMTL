@@ -12,14 +12,12 @@
 #'   \code{n x numTasks}. May contain \code{NA} for censored
 #'   observations.
 #' @param lambda Regularisation parameter for the orthogonal penalty.
-#' @param lambda1 Regularisation parameter for the elastic-net penalty.
-#'   Default: \code{NULL} (passed through to \code{\link{orthoMTL}}).
+#' @param alpha Elastic-net mixing parameter in \eqn{[0, 1]}, passed
+#'   through to \code{\link{orthoMTL}}. Default: \code{0}.
 #' @param step_size Step size for gradient descent. Default: \code{0.1}.
 #' @param K Constraint matrix of dimensions
 #'   \code{numTasks x numTasks}. Default: \code{NULL} (identity).
 #' @param disjoint Logical. Enforce disjoint supports? Default:
-#'   \code{FALSE}.
-#' @param enet Logical. Include elastic-net sparsity? Default:
 #'   \code{FALSE}.
 #' @param survival Logical. Use censored survival loss? Default:
 #'   \code{FALSE}.
@@ -105,11 +103,10 @@
 #' head(boot_res$results)
 bootstrap_orthoMTL <- function(X, Y,
                                lambda = 1,
-                               lambda1 = NULL,
+                               alpha = 0,
                                step_size = 0.1,
                                K = NULL,
                                disjoint = FALSE,
-                               enet = FALSE,
                                survival = FALSE,
                                censored.mat = NULL,
                                n_repeats = 100,
@@ -178,11 +175,10 @@ bootstrap_orthoMTL <- function(X, Y,
       X            = X[idx, , drop = FALSE],
       Y            = Y[idx, , drop = FALSE],
       lambda       = lambda,
-      lambda1      = lambda1,
+      alpha        = alpha,
       step_size    = step_size,
       K            = K,
       disjoint     = disjoint,
-      enet         = enet,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = i,
@@ -221,11 +217,10 @@ bootstrap_orthoMTL <- function(X, Y,
       X            = X,
       Y            = Y[idx, , drop = FALSE],
       lambda       = lambda,
-      lambda1      = lambda1,
+      alpha        = alpha,
       step_size    = step_size,
       K            = K,
       disjoint     = disjoint,
-      enet         = enet,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = i,

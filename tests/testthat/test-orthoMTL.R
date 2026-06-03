@@ -62,6 +62,34 @@ test_that("orthoMTL respects logistic mode", {
   expect_true(fit$hyperparameters$logistic)
 })
 
+test_that("logistic gradient is correct under label flip (REG-01)", {
+  # The logistic loss log(1+exp(-Y*Xw)) is invariant under (Y, W) -> (-Y, -W),
+  # so flipping all labels must negate the fitted coefficients. The old
+  # gradient (-(Y - sigmoid(Xw)), a y in {0,1} form) breaks this symmetry.
+  set.seed(7)
+  n <- 60; p <- 4; n_tasks <- 2
+  X <- matrix(rnorm(n * p), n, p)
+  Y <- matrix(sample(c(-1, 1), n * n_tasks, replace = TRUE), n, n_tasks)
+
+  fit_pos <- orthoMTL(X,  Y, lambda = 0.01, logistic = TRUE)
+  fit_neg <- orthoMTL(X, -Y, lambda = 0.01, logistic = TRUE)
+
+  expect_equal(fit_neg$B, -fit_pos$B, tolerance = 1e-6)
+})
+
+test_that("logistic loss does not overflow on large scores (REG-02)", {
+  # Large |Xw| made the naive log(1+exp(-Y*Xw)) overflow to Inf/NaN.
+  set.seed(11)
+  n <- 40; p <- 3; n_tasks <- 2
+  X <- matrix(rnorm(n * p), n, p) * 100
+  Y <- matrix(sample(c(-1, 1), n * n_tasks, replace = TRUE), n, n_tasks)
+
+  fit <- orthoMTL(X, Y, lambda = 0.01, logistic = TRUE, step_size = 1)
+
+  expect_true(is.finite(fit$obj))
+  expect_false(anyNA(fit$B))
+})
+
 test_that("orthoMTL survival mode requires censored.mat", {
   X <- matrix(rnorm(20), 4, 5)
   Y <- matrix(c(1, 0, NA, 1, 1, 1, NA, 0), 4, 2)
@@ -100,17 +128,38 @@ test_that("orthoMTL disjoint mode runs", {
   expect_true(fit$hyperparameters$disjoint)
 })
 
-test_that("orthoMTL enet mode runs and stores lambda1", {
+test_that("orthoMTL elastic-net (alpha > 0) runs and stores alpha", {
   set.seed(42)
   n <- 50; p <- 5; n_tasks <- 3
   X <- matrix(rnorm(n * p), n, p)
   Y <- matrix(rnorm(n * n_tasks), n, n_tasks)
 
-  fit <- orthoMTL(X, Y, lambda = 0.01, enet = TRUE, lambda1 = 0.005)
+  fit <- orthoMTL(X, Y, lambda = 0.01, alpha = 0.5)
 
   expect_s3_class(fit, "orthoMTL")
-  expect_true(fit$hyperparameters$enet)
-  expect_equal(fit$hyperparameters$lambda1, 0.005)
+  expect_equal(fit$hyperparameters$alpha, 0.5)
+})
+
+test_that("orthoMTL rejects alpha outside [0, 1]", {
+  X <- matrix(rnorm(20), 4, 5)
+  Y <- matrix(rnorm(8), 4, 2)
+  expect_error(orthoMTL(X, Y, alpha = 1.5), "\\[0, 1\\]")
+  expect_error(orthoMTL(X, Y, alpha = -0.1), "\\[0, 1\\]")
+})
+
+test_that("elastic-net mixing endpoints both produce finite fits", {
+  set.seed(1)
+  n <- 40; p <- 6; n_tasks <- 3
+  X <- matrix(rnorm(n * p), n, p)
+  Y <- matrix(rnorm(n * n_tasks), n, n_tasks)
+
+  fit0 <- orthoMTL(X, Y, lambda = 0.01, alpha = 0)   # pure orthogonality
+  fit1 <- orthoMTL(X, Y, lambda = 0.01, alpha = 1)   # pure Lasso
+
+  expect_false(anyNA(fit0$B))
+  expect_false(anyNA(fit1$B))
+  expect_true(is.finite(fit0$obj))
+  expect_true(is.finite(fit1$obj))
 })
 
 test_that("orthoMTL stops on invalid inputs", {

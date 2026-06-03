@@ -19,8 +19,7 @@ Thumbs.db
 .Rproj.user/
 *.Rproj
 
-# roxygen2 generated (regenerated on build)
-man/*.Rd
-NAMESPACE
+# roxygen2 output (NAMESPACE and man/*.Rd ARE committed — see CLAUDE.md)
+# Only the vignette/build byproducts below are ignored.
 /doc/
 /Meta/

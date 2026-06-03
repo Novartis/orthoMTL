@@ -36,8 +36,8 @@ print.orthoMTL <- function(x, ...) {
       format(x$obj, digits = 4, nsmall = 4), ")\n", sep = " ")
 
   pen_str <- paste0("lambda = ", x$hyperparameters$lambda)
-  if (isTRUE(x$hyperparameters$enet)) {
-    pen_str <- paste0(pen_str, ", lambda1 = ", x$hyperparameters$lambda1)
+  if (!is.null(x$hyperparameters$alpha) && x$hyperparameters$alpha > 0) {
+    pen_str <- paste0(pen_str, ", alpha = ", x$hyperparameters$alpha)
   }
   cat("Penalty:", pen_str, "\n")
 

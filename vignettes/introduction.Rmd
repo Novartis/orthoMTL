@@ -44,8 +44,9 @@ The optimisation problem solved by `orthoMTL()` is:
 
 $$
 \min_W \; \frac{1}{2n}\|XW - Y\|^2_{\text{obs}} \;+\;
-\frac{\lambda}{2}\sum_{i \neq j} K_{ij}\,|W_i^\top W_j| \;+\;
-\frac{\lambda_1}{2}\sum_j K_{jj}\,\|W_j\|_1
+\lambda\Bigl[\frac{1-\alpha}{2}\,\Omega_K(W)^2 \;+\; \alpha\,\|W\|_1\Bigr],
+\qquad
+\Omega_K(W)^2 = \sum_{s,t} K_{st}\,|W_s^\top W_t|
 $$
 
 where:
@@ -59,8 +60,9 @@ where:
 - $K$ is a constraint matrix encoding task relationships — nearby
   thresholds share more support, distant thresholds are pushed toward
   orthogonality
-- $\lambda$ controls the orthogonality penalty
-- $\lambda_1$ controls elastic-net sparsity
+- $\lambda$ controls the overall penalty strength
+- $\alpha \in [0, 1]$ is the elastic-net mixing: $\alpha = 0$ gives the pure
+  orthogonality penalty, $\alpha = 1$ gives a pure Lasso
 
 ## Simulated Data
 
@@ -144,7 +146,7 @@ fit <- orthoMTL(
   X = sim$X, Y = Y,
   lambda = 1e-3, step_size = 0.5,
   K = K, survival = TRUE, censored.mat = W,
-  enet = TRUE, lambda1 = 1e-3
+  alpha = 0.5
 )
 summary(fit)
 ```
@@ -174,11 +176,10 @@ cv_res <- cv_orthoMTL(
   W.train   = W,
   K         = K,
   lambdas   = c(1e-5, 1e-4, 1e-3),
-  lambdas1  = c(1e-4, 1e-3, 1e-2),
+  alphas    = c(0, 0.5, 1),
   stepsizes = c(1, 2, 5),
   diag_vals = c(0.5, n_tasks, 2 * n_tasks),
   survival  = TRUE,
-  enet      = TRUE,
   folds     = folds,
   n_cores   = 1,
   seed      = 42,
@@ -203,12 +204,11 @@ diag(K_final) <- best$diag_val
 fit_final <- orthoMTL(
   X = sim$X, Y = Y,
   lambda    = best$lambda,
-  lambda1   = best$lambda1,
+  alpha     = best$alpha,
   step_size = best$stepsize,
   K         = K_final,
   survival  = TRUE,
-  censored.mat = W,
-  enet = TRUE
+  censored.mat = W
 )
 summary(fit_final)
 ```
@@ -236,12 +236,11 @@ against null models (permuted outcomes, no signal).
 boot_res <- bootstrap_orthoMTL(
   X = sim$X, Y = Y,
   lambda    = best$lambda,
-  lambda1   = best$lambda1,
+  alpha     = best$alpha,
   step_size = best$stepsize,
   K         = K_final,
   survival  = TRUE,
   censored.mat = W,
-  enet      = TRUE,
   n_repeats = 200,
   n_cores   = 1,
   verbose   = FALSE
