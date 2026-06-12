@@ -150,9 +150,20 @@ bootstrap_orthoMTL <- function(X, Y,
   # ---------------------------
   # Parallel setup
   # ---------------------------
-  cl_parallel <- parallel::makeCluster(n_cores)
-  doParallel::registerDoParallel(cl_parallel)
-  on.exit(parallel::stopCluster(cl_parallel), add = TRUE)
+  if (n_cores > 1L) {
+    cl_parallel <- parallel::makeCluster(n_cores)
+    doParallel::registerDoParallel(cl_parallel)
+    # Workers are fresh R sessions (PSOCK on Windows); ensure they can locate
+    # orthoMTL even when it lives in a temporary library (e.g. during R CMD
+    # check or load_all) by inheriting the parent's library paths.
+    parallel::clusterCall(cl_parallel, function(p) .libPaths(p), .libPaths())
+    on.exit(parallel::stopCluster(cl_parallel), add = TRUE)
+  } else {
+    # Single core: run sequentially in-process. Avoids spawning a PSOCK worker
+    # that cannot library(orthoMTL) under R CMD check (the Windows-only
+    # vignette build failure).
+    foreach::registerDoSEQ()
+  }
 
   # ---------------------------
   # Phase 1: Real bootstrap
