@@ -1,24 +1,28 @@
 Package: orthoMTL
 Type: Package
-Title: Multitask learning with Orthogonal Constraints
+Title: Multi-Task Learning with Orthogonal Constraints
 Version: 0.1.0
-Author: Kevin Vervier
-Maintainer: Kevin Vervier <kevin.vervier@novartis.com>
-Description: This package intends at fitting multitask learning models.
-    It implements a penalty with orthogonality constraints developed in Vervier et al., 2014.
-    Applications include (but not limited to) multiclass classification, as well as survival data.
+Authors@R: person("Kevin", "Vervier",
+    email = "kevin.vervier@novartis.com",
+    role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0002-8791-5718"))
+Description: Fits regularised multi-task learning models where relationships
+    between tasks are controlled via orthogonality or disjoint-support constraints.
+    Supports regression, binary classification, and censored survival data.
+    In survival mode, time-to-event outcomes are converted into binary labels at
+    user-defined thresholds, enabling the discovery of features with time-varying
+    effects that standard proportional-hazards models cannot detect.
+    Implements the penalty described in Vervier et al. (2014)
+    <https://hal.science/hal-00985654>.
 License: GPL-3 + file LICENSE
 Encoding: UTF-8
-LazyData: true
 Imports:
     parallel,
     doParallel,
     foreach,
     ggplot2,
-    ggpubr,
-    dplyr,
-    base,
-    rlang
+    rlang,
+    stats
 VignetteBuilder: knitr
 Suggests:
     knitr,
@@ -29,4 +33,4 @@ Suggests:
     rmarkdown
 RoxygenNote: 7.3.3
 Depends: 
-    R (>= 2.10)
+    R (>= 4.0.0)

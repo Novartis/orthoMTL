@@ -107,7 +107,7 @@ indicates whether observed coefficients are distinguishable from
 noise. Visualise with \code{\link{plot_bootstrap}}.
 }
 \examples{
-# Small example (fast: 5 repeats, 1 core)
+\donttest{
 set.seed(42)
 n <- 30; p <- 5; n_tasks <- 3
 X <- matrix(rnorm(n * p), n, p)
@@ -123,11 +123,12 @@ K <- create_constraint_matrix(n_tasks)
 boot_res <- bootstrap_orthoMTL(
   X = X, Y = Y, lambda = 1e-3, step_size = 0.1,
   K = K, survival = TRUE, censored.mat = W,
-  n_repeats = 5, n_cores = 1, verbose = TRUE
+  n_repeats = 5, n_cores = 1, verbose = FALSE
 )
 
 print(boot_res)
 head(boot_res$results)
+}
 }
 \seealso{
 \code{\link{orthoMTL}}, \code{\link{plot_bootstrap}}

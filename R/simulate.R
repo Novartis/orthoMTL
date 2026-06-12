@@ -113,6 +113,7 @@
 #' sim$ground_truth$coefficients[sim$ground_truth$signal_features, ]
 #'
 #' # Use in orthoMTL workflow
+#' \donttest{
 #' thresholds <- c(4, 6, 10, 15)
 #' Y <- create_longitudinal_labels(sim$SurvTime, sim$Event, thresholds)
 #' W <- create_indicator_matrix(Y)
@@ -121,6 +122,7 @@
 #' fit <- orthoMTL(sim$X, Y, lambda = 1e-3, K = K,
 #'                 survival = TRUE, censored.mat = W)
 #' summary(fit)
+#' }
 simulate_mtl <- function(n = 200,
                          p = 30,
                          n_signals = 5,

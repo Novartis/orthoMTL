@@ -1,4 +1,4 @@
-# orthoMTL 0.9.0 (2025-xx-xx)
+# orthoMTL 0.1.0 (2026-06-12)
 
 ## Renamed from `orthopen` to `orthoMTL`
 
@@ -13,13 +13,13 @@ This release represents a major refactor and scope expansion of the
   the orthogonality penalty (`alpha = 0`) with L1/Lasso (`alpha = 1`).
 * **Survival data utilities**: `create_longitudinal_labels()`,
   `create_indicator_matrix()`, `create_constraint_matrix()`.
-* **Cross-validation**: `cv_optimization_foreach()` with parallel
-  grid search over lambda, step size, diagonal value, and method.
-* **Bootstrap inference**: `bootstrapMTL()` compares real coefficient
-  variability against null-model permutations.
+* **Cross-validation**: `cv_orthoMTL()` with parallel grid search over
+  lambda, step size, diagonal value, and elastic-net mixing.
+* **Bootstrap inference**: `bootstrap_orthoMTL()` compares real
+  coefficient variability against null-model permutations.
 * **Evaluation**: `cindex_mtl()` for multi-task concordance index.
-* **Visualisation suite**: `plotHeatmap()`, `correlationMap()`,
-  `predictionPlot()`, `plot_bootstrapMTL()`.
+* **Visualisation suite**: `plot_heatmap()`, `plot_correlation()`,
+  `plot_prediction()`, `plot_bootstrap()`.
 
 ## Breaking changes from `orthopen`
 
@@ -47,9 +47,9 @@ This release represents a major refactor and scope expansion of the
 
 ## Infrastructure
 
-* Package scaffolding: LICENSE (GPL-3), `.gitlab-ci.yml`,
-  `testthat` runner, `inst/CITATION`.
-* Selective NAMESPACE exports (planned for v1.0.0).
+* Package scaffolding: LICENSE (GPL-3), `testthat` runner,
+  `inst/CITATION`, GitHub Actions CI.
+* Selective NAMESPACE exports.
 
 ---
 

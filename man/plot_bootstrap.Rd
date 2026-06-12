@@ -37,9 +37,25 @@ When the blue (real) band is clearly separated from the grey
 noise at that task/threshold.
 }
 \examples{
-# See ?bootstrap_orthoMTL for how to generate boot_res
-# plot_bootstrap(boot_res)
-# plot_bootstrap(boot_res, features = c("V1", "V3"))
+\donttest{
+set.seed(42)
+n <- 30; p <- 5; n_tasks <- 3
+X <- matrix(rnorm(n * p), n, p)
+colnames(X) <- paste0("V", seq_len(p))
+SurvTime <- rexp(n, rate = 0.1)
+Event <- rbinom(n, 1, 0.7)
+thresholds <- c(4, 6, 10)
+Y <- create_longitudinal_labels(SurvTime, Event, thresholds)
+W <- create_indicator_matrix(Y)
+K <- create_constraint_matrix(n_tasks)
+boot_res <- bootstrap_orthoMTL(
+  X = X, Y = Y, lambda = 1e-3, step_size = 0.1,
+  K = K, survival = TRUE, censored.mat = W,
+  n_repeats = 5, n_cores = 1, verbose = FALSE
+)
+plots <- plot_bootstrap(boot_res)
+plots[[1]]
+}
 }
 \seealso{
 \code{\link{bootstrap_orthoMTL}}
