@@ -73,7 +73,7 @@
 #' @export
 #'
 #' @examples
-#' # Small example (fast: 2 configs x 2 folds)
+#' \donttest{
 #' set.seed(42)
 #' n <- 50; p <- 5; n_tasks <- 3
 #' X <- matrix(rnorm(n * p), n, p)
@@ -93,11 +93,12 @@
 #'   lambdas = c(1e-3, 1e-2), alphas = 0,
 #'   stepsizes = c(0.1), diag_vals = c(0.5, 1),
 #'   survival = TRUE, disjoint = FALSE,
-#'   folds = folds, n_cores = 1, seed = 42, verbose = TRUE
+#'   folds = folds, n_cores = 1, seed = 42, verbose = FALSE
 #' )
 #'
 #' print(cv_res)
 #' cv_res$best
+#' }
 cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         K = NULL,
                         lambdas = c(1e-3, 1e-2),

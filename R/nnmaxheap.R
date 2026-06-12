@@ -17,6 +17,12 @@
 #'
 #' @export
 #'
+#' @examples
+#' # Project a vector onto the non-negative non-increasing space
+#' nnmaxheap_C(c(3, 1, 2, -1))
+#'
+#' # Already valid input: returned unchanged
+#' nnmaxheap_C(c(5, 3, 3, 1))
 nnmaxheap_C <- function(m) {
   n <- length(m)
 
