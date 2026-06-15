@@ -1,3 +1,48 @@
+# orthoMTL 0.1.0.9000 (development)
+
+## General-purpose regression & classification support
+
+The solver already supported regression (`logistic = FALSE`,
+`survival = FALSE`) and classification (`logistic = TRUE`); these are now
+first-class end-to-end with matching evaluation, tuning, and simulation
+scaffolding (previously survival-only):
+
+* **Non-survival metrics**: `rmse_mtl()`, `r2_mtl()` (regression) and
+  `accuracy_mtl()`, `auc_mtl()` (classification), complementing the
+  survival `cindex_mtl()` (unchanged).
+* **Mode-aware cross-validation**: `cv_orthoMTL()` gains `logistic` and
+  `metric` arguments. The scoring metric now defaults by mode — `cindex`
+  for survival, `auc` for logistic, `rmse` otherwise — and selection
+  honours each metric's optimisation direction.
+* **`predict()` `type` argument**: `"link"` (default, unchanged),
+  `"response"` (sigmoid probabilities for logistic fits), and `"class"`
+  (predicted {-1, +1} labels for logistic fits).
+* **Simulation modes**: `simulate_mtl(mode = ...)` now generates
+  `"regression"` and `"classification"` responses in addition to
+  `"survival"` (the default).
+
+## Solver
+
+* **Gradient-step schedule exposed** (`schedule` argument to `orthoMTL()`).
+  The previously hardcoded `sqrt(i)` decay is now `schedule = "sqrt"` (the
+  default, reproducing prior results exactly); `"log"`, `"const"`, and
+  `"linear"` are also available. An A/B study
+  (`validation/ab_s02_gradient_schedule.R`) found `"log"`/`"const"` reach the
+  same optimum ~12--17x faster than `"sqrt"`, while `"linear"` can stall.
+  Changing the schedule changes the optimisation path and the exact
+  coefficients, so the default is unchanged. `cv_orthoMTL()` and
+  `bootstrap_orthoMTL()` gained a matching `schedule` argument (passed to every
+  fit), so grid search and bootstrap can use the faster schedules too.
+
+## Behaviour change
+
+* `cv_orthoMTL(survival = FALSE)` previously scored every fold with the
+  survival C-index regardless of the data; it now defaults to RMSE for
+  plain regression (and AUC when `logistic = TRUE`). Pass `metric =
+  "cindex"` to restore the old scoring.
+
+---
+
 # orthoMTL 0.1.0 (2026-06-12)
 
 ## Renamed from `orthopen` to `orthoMTL`

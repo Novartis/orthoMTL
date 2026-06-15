@@ -18,6 +18,7 @@ orthoMTL(
   disjoint = FALSE,
   logistic = FALSE,
   alpha = 0,
+  schedule = c("sqrt", "log", "const", "linear"),
   survival = FALSE,
   censored.mat = NULL,
   verbose = 0
@@ -54,6 +55,31 @@ Default: \code{1e-5}.}
 The penalty is \eqn{\lambda [(1 - \alpha)/2\, \Omega_K(W)^2 + \alpha \|W\|_1]};
 \code{alpha = 0} gives the pure orthogonality penalty and \code{alpha = 1}
 gives a pure Lasso.}
+
+\item{schedule}{Character; the gradient-step decay schedule -- how the
+per-iteration scale grows with the iteration index \eqn{i}. The coefficient
+update is \eqn{W \leftarrow W - \texttt{step\_size}\, \nabla /
+(\texttt{scale} \cdot \|\nabla\|)}, so a faster-growing \code{scale} means a
+faster-decaying effective step. One of:
+\describe{
+  \item{\code{"sqrt"}}{(default) \eqn{\texttt{scale} = \sqrt{i}}, effective
+    step \eqn{\propto 1/\sqrt{i}} -- the classic subgradient schedule and
+    the historical hardcoded behaviour.}
+  \item{\code{"log"}}{\eqn{\texttt{scale} = \log(i) + 1} (slow decay).}
+  \item{\code{"const"}}{\eqn{\texttt{scale} = 1} (no decay).}
+  \item{\code{"linear"}}{\eqn{\texttt{scale} = i}, effective step
+    \eqn{\propto 1/i} (Robbins-Monro).}
+}
+The default \code{"sqrt"} is retained for backward compatibility: it
+reproduces previously published results exactly. An A/B study shipped with
+the package (\code{validation/ab_s02_gradient_schedule.R}) found that
+\code{"sqrt"} reaches the \emph{correct} optimum but converges to it roughly
+12--17x slower than \code{"log"} and \code{"const"} (which reach the same
+objective in a small fraction of the iterations), while \code{"linear"}
+decays too aggressively and can stall short of the optimum. Prefer
+\code{"log"} or \code{"const"} when convergence speed matters; note that
+changing the schedule changes the optimisation path and therefore the exact
+coefficients, so it should not be altered when reproducing published runs.}
 
 \item{survival}{a logical value indicating whether survival analysis should be performed, default is FALSE}
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/simulate.R
 \name{simulate_mtl}
 \alias{simulate_mtl}
-\title{Simulate Multi-Task Survival Data with Time-Varying Effects}
+\title{Simulate Multi-Task Data with Time-Varying Effects}
 \usage{
 simulate_mtl(
   n = 200,
@@ -10,6 +10,8 @@ simulate_mtl(
   n_signals = 5,
   n_continuous = 1,
   thresholds = c(4, 6, 10, 15),
+  mode = c("survival", "regression", "classification"),
+  noise_sd = 1,
   censoring_max = 25,
   baseline_hazard = 0.05,
   effect_strength = 0.8,
@@ -33,6 +35,25 @@ are binary.}
 \item{thresholds}{Numeric vector of time thresholds defining the
 task structure. Default: \code{c(4, 6, 10, 15)}.}
 
+\item{mode}{Character; the response type to generate. One of
+\code{"survival"} (default), \code{"regression"}, or
+\code{"classification"}. The feature matrix and ground-truth
+coefficients are generated identically across modes; only the
+response differs:
+\describe{
+  \item{survival}{piecewise-exponential \code{SurvTime}/\code{Event}
+    (the historical behaviour).}
+  \item{regression}{\code{Y = X \%*\% beta + N(0, noise_sd^2)},
+    returned as the \code{n x length(thresholds)} matrix \code{Y}.}
+  \item{classification}{binary labels in \eqn{\{-1, +1\}} sampled
+    from \eqn{P(Y = +1) = 1 / (1 + e^{-X beta})}, returned as
+    \code{Y}. This matches the label encoding \code{orthoMTL}
+    optimises with \code{logistic = TRUE}.}
+}}
+
+\item{noise_sd}{Standard deviation of the Gaussian noise added in
+\code{mode = "regression"}. Ignored otherwise. Default: \code{1}.}
+
 \item{censoring_max}{Maximum censoring time. Censoring times are
 drawn from \code{Unif(0, censoring_max)}. Default: \code{25}.}
 
@@ -50,6 +71,12 @@ feature effects. Default: \code{0.5}.}
 \value{
 An object of class \code{"simulated_mtl"} containing:
   \describe{
+    \item{mode}{The response type generated.}
+    \item{Y}{For \code{mode = "regression"} / \code{"classification"},
+      the \code{n x length(thresholds)} response matrix. \code{NULL}
+      in survival mode (use \code{SurvTime}/\code{Event} instead).}
+    \item{SurvTime, Event}{Survival mode only (\code{NULL} otherwise):
+      observed times and event indicators.}
     \item{X}{Numeric matrix of dimensions \code{n x (p + 1)}.
       Columns include \code{n_continuous} continuous features
       (standard normal), \code{p - n_continuous} binary features
@@ -81,10 +108,12 @@ An object of class \code{"simulated_mtl"} containing:
   }
 }
 \description{
-Generates a realistic simulated dataset with piecewise-exponential
-survival times, binary and continuous features, and known ground-truth
-coefficient structure. Designed for demonstrating and testing
-\code{\link{orthoMTL}} in survival mode.
+Generates a realistic simulated dataset with binary and continuous
+features and a known ground-truth coefficient structure. The
+\code{mode} argument selects the response type: piecewise-exponential
+\strong{survival} times (default), multi-task \strong{regression}
+targets, or multi-task binary \strong{classification} labels. Designed
+for demonstrating and testing \code{\link{orthoMTL}}.
 }
 \details{
 \strong{Feature structure:}

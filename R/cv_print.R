@@ -27,7 +27,9 @@ print.cv_orthoMTL <- function(x, n_top = 5, ...) {
   cat("  alpha    =", x$best$alpha, "\n")
   cat("  stepsize =", x$best$stepsize, "\n")
   cat("  diag_val =", x$best$diag_val, "\n")
-  cat("  CV C-index =", format(x$best$cv_score, digits = 4), "\n")
+  metric_label <- if (!is.null(x$metric)) x$metric else "C-index"
+  cat("  CV ", metric_label, " = ",
+      format(x$best$cv_score, digits = 4), "\n", sep = "")
 
   cat("---\n")
 

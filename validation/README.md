@@ -26,6 +26,31 @@ R CMD INSTALL .
 | `old_vs_fixed_logistic.R` | Did the bug actually matter? | legacy `orthopen` source on disk |
 | `simulation_recovery.R` | Does the survival path extract real signal? | `orthoMTL` only |
 
+## S-* solver A/B studies
+
+Behaviour-comparison scripts for the `S-*` KANBAN cards (loss/penalty
+normalisation, convergence budget, init asymmetry, gradient schedule). Each
+compares the **shipped** behaviour (A) against a **candidate** (B) on the
+same data and prints a verdict; none modifies the package. All four are
+driven entirely through existing arguments (`ab_s02` via the `schedule`
+argument that the S-02 study motivated and that now ships in `orthoMTL()`).
+
+| Script | Card | Finding |
+|---|---|---|
+| `ab_s01_normalisation.R` | S-01 | **Keep.** The per-observation loss normalisation gives *active, n-stable* shrinkage; dividing the penalty by `n` instead makes regularisation wash out as `n` grows. Standard glmnet convention, not a defect. |
+| `ab_s04_convergence.R` | S-04 | **Defaults adequate.** Extra patience leaves the objective unchanged and the iteration cap never binds, even at p>n, λ=1e-4, k=16. The lever (if any) is `max_iter`, not `stop_no_improve`. |
+| `ab_s05_init.R` | S-05 | **Asymmetry necessary.** `disjoint`+zero init is a fixed point of `proj_disjoint()` (stays pinned at 0); non-disjoint is deterministic at zero and random init only adds seed noise. |
+| `ab_s02_gradient_schedule.R` | S-02 | **Implemented as `schedule=`.** `sqrt(i)` is correct but ~12–17× slower than `log`/`const` to the *same* optimum (`linear`=1/i stalls). Now selectable via `orthoMTL(schedule=)`; default `"sqrt"` preserves published numerics. |
+
+All four run against the **installed** package only:
+
+```
+"C:\Program Files\R\R-4.5.3\bin\Rscript.exe" validation/ab_s01_normalisation.R
+"C:\Program Files\R\R-4.5.3\bin\Rscript.exe" validation/ab_s04_convergence.R
+"C:\Program Files\R\R-4.5.3\bin\Rscript.exe" validation/ab_s05_init.R
+"C:\Program Files\R\R-4.5.3\bin\Rscript.exe" validation/ab_s02_gradient_schedule.R
+```
+
 ### 1. `parity_orthopen.R` — bit-for-bit vs the validated reference
 Feeds identical inputs to `orthoMTL()` and `orthopen::orthopen()`
 (github.com/kevinVervier/orthopen, **v1.1.0** — the independently validated

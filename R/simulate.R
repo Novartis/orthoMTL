@@ -1,15 +1,29 @@
-# TODO(v1.1): Add mode = "regression" and mode = "classification" support.
-#   Currently only survival mode is implemented. Regression mode would
-#   generate Y = X %*% B + noise (multi-task regression). Classification
-#   mode would generate binary Y via logistic(X %*% B).
-
-#' Simulate Multi-Task Survival Data with Time-Varying Effects
+#' Simulate Multi-Task Data with Time-Varying Effects
 #'
-#' Generates a realistic simulated dataset with piecewise-exponential
-#' survival times, binary and continuous features, and known ground-truth
-#' coefficient structure. Designed for demonstrating and testing
-#' \code{\link{orthoMTL}} in survival mode.
+#' Generates a realistic simulated dataset with binary and continuous
+#' features and a known ground-truth coefficient structure. The
+#' \code{mode} argument selects the response type: piecewise-exponential
+#' \strong{survival} times (default), multi-task \strong{regression}
+#' targets, or multi-task binary \strong{classification} labels. Designed
+#' for demonstrating and testing \code{\link{orthoMTL}}.
 #'
+#' @param mode Character; the response type to generate. One of
+#'   \code{"survival"} (default), \code{"regression"}, or
+#'   \code{"classification"}. The feature matrix and ground-truth
+#'   coefficients are generated identically across modes; only the
+#'   response differs:
+#'   \describe{
+#'     \item{survival}{piecewise-exponential \code{SurvTime}/\code{Event}
+#'       (the historical behaviour).}
+#'     \item{regression}{\code{Y = X \%*\% beta + N(0, noise_sd^2)},
+#'       returned as the \code{n x length(thresholds)} matrix \code{Y}.}
+#'     \item{classification}{binary labels in \eqn{\{-1, +1\}} sampled
+#'       from \eqn{P(Y = +1) = 1 / (1 + e^{-X beta})}, returned as
+#'       \code{Y}. This matches the label encoding \code{orthoMTL}
+#'       optimises with \code{logistic = TRUE}.}
+#'   }
+#' @param noise_sd Standard deviation of the Gaussian noise added in
+#'   \code{mode = "regression"}. Ignored otherwise. Default: \code{1}.
 #' @param n Number of patients. Default: \code{200}.
 #' @param p Number of features excluding the treatment column.
 #'   Default: \code{30}.
@@ -32,6 +46,12 @@
 #'
 #' @return An object of class \code{"simulated_mtl"} containing:
 #'   \describe{
+#'     \item{mode}{The response type generated.}
+#'     \item{Y}{For \code{mode = "regression"} / \code{"classification"},
+#'       the \code{n x length(thresholds)} response matrix. \code{NULL}
+#'       in survival mode (use \code{SurvTime}/\code{Event} instead).}
+#'     \item{SurvTime, Event}{Survival mode only (\code{NULL} otherwise):
+#'       observed times and event indicators.}
 #'     \item{X}{Numeric matrix of dimensions \code{n x (p + 1)}.
 #'       Columns include \code{n_continuous} continuous features
 #'       (standard normal), \code{p - n_continuous} binary features
@@ -128,6 +148,9 @@ simulate_mtl <- function(n = 200,
                          n_signals = 5,
                          n_continuous = 1,
                          thresholds = c(4, 6, 10, 15),
+                         mode = c("survival", "regression",
+                                  "classification"),
+                         noise_sd = 1,
                          censoring_max = 25,
                          baseline_hazard = 0.05,
                          effect_strength = 0.8,  # was 0.5
@@ -135,6 +158,7 @@ simulate_mtl <- function(n = 200,
                          seed = 42) {
 
   cl <- match.call()
+  mode <- match.arg(mode)
 
   # ---------------------------
   # Input validation
@@ -257,8 +281,84 @@ simulate_mtl <- function(n = 200,
   beta["treatment", ] <- treatment_effect
 
   # ---------------------------
-  # Generate survival times (piecewise exponential)
+  # Generate the response (mode-specific)
   # ---------------------------
+  SurvTime <- NULL
+  Event    <- NULL
+  Y        <- NULL
+
+  if (mode == "regression") {
+    # Multi-task linear response with Gaussian noise.
+    Y <- X %*% beta + matrix(rnorm(n * numTasks, sd = noise_sd),
+                             nrow = n, ncol = numTasks)
+    colnames(Y) <- as.character(thresholds)
+  } else if (mode == "classification") {
+    # Bernoulli labels in {-1, +1} from the logistic link.
+    prob <- 1 / (1 + exp(-(X %*% beta)))
+    Y <- matrix(ifelse(matrix(runif(n * numTasks), n, numTasks) < prob,
+                       1, -1),
+                nrow = n, ncol = numTasks)
+    colnames(Y) <- as.character(thresholds)
+  } else {
+    # mode == "survival": piecewise-exponential times (historical path).
+    Y <- .simulate_survival_times(
+      X = X, beta = beta, n = n, numTasks = numTasks,
+      thresholds = thresholds, baseline_hazard = baseline_hazard,
+      censoring_max = censoring_max
+    )
+    SurvTime <- Y$SurvTime
+    Event    <- Y$Event
+    Y        <- NULL
+  }
+
+  # ---------------------------
+  # Build ground truth
+  # ---------------------------
+  ground_truth <- list(
+    coefficients    = beta,
+    signal_features = signal_names,
+    null_features   = null_names,
+    effect_types    = effect_types,
+    thresholds      = thresholds,
+    baseline_hazard = baseline_hazard
+  )
+
+  # ---------------------------
+  # Return S3 object
+  # ---------------------------
+  structure(
+    list(
+      mode           = mode,
+      X              = X,
+      Y              = Y,
+      SurvTime       = SurvTime,
+      Event          = Event,
+      treatment      = X[, "treatment"],
+      feature_names  = feature_names,
+      ground_truth   = ground_truth,
+      n              = n,
+      p              = p,
+      n_signals      = n_signals,
+      n_continuous   = n_continuous,
+      thresholds     = thresholds,
+      seed           = seed,
+      call           = cl
+    ),
+    class = "simulated_mtl"
+  )
+}
+
+
+# ---------------------------------------------------------------------
+# Internal: piecewise-exponential survival time generator (SIM-01)
+#
+# Factored out of simulate_mtl so the survival path is unchanged while
+# regression/classification responses are produced inline. Returns a
+# list(SurvTime, Event).
+# ---------------------------------------------------------------------
+.simulate_survival_times <- function(X, beta, n, numTasks, thresholds,
+                                     baseline_hazard, censoring_max) {
+
   # Interval boundaries: [0, t1), [t1, t2), ..., [t_{K-1}, t_K), [t_K, Inf)
   interval_bounds <- c(0, thresholds)
   n_intervals <- length(interval_bounds)  # includes the tail interval
@@ -315,39 +415,7 @@ simulate_mtl <- function(n = 200,
   SurvTime <- pmin(SurvTime_true, censor_time)
   Event <- as.numeric(SurvTime_true <= censor_time)
 
-  # ---------------------------
-  # Build ground truth
-  # ---------------------------
-  ground_truth <- list(
-    coefficients    = beta,
-    signal_features = signal_names,
-    null_features   = null_names,
-    effect_types    = effect_types,
-    thresholds      = thresholds,
-    baseline_hazard = baseline_hazard
-  )
-
-  # ---------------------------
-  # Return S3 object
-  # ---------------------------
-  structure(
-    list(
-      X              = X,
-      SurvTime       = SurvTime,
-      Event          = Event,
-      treatment      = X[, "treatment"],
-      feature_names  = feature_names,
-      ground_truth   = ground_truth,
-      n              = n,
-      p              = p,
-      n_signals      = n_signals,
-      n_continuous   = n_continuous,
-      thresholds     = thresholds,
-      seed           = seed,
-      call           = cl
-    ),
-    class = "simulated_mtl"
-  )
+  list(SurvTime = SurvTime, Event = Event)
 }
 
 

@@ -14,7 +14,10 @@ cv_orthoMTL(
   stepsizes = c(0.1, 0.5),
   diag_vals = c(0.5, 1),
   survival = TRUE,
+  logistic = FALSE,
+  metric = NULL,
   disjoint = FALSE,
+  schedule = c("sqrt", "log", "const", "linear"),
   folds = NULL,
   n_cores = 2,
   seed = 42,
@@ -51,8 +54,27 @@ constraint matrix \code{K} to search.}
 \item{survival}{Logical. Use censored survival loss? Default:
 \code{TRUE}.}
 
+\item{logistic}{Logical. Fit logistic (classification) models?
+Passed through to \code{\link{orthoMTL}}. Default: \code{FALSE}.}
+
+\item{metric}{Character; the scoring metric maximised/minimised over
+the grid, or \code{NULL} (default) to choose automatically by mode:
+\code{"cindex"} when \code{survival = TRUE}, \code{"auc"} when
+\code{logistic = TRUE}, otherwise \code{"rmse"}. Supported values:
+\code{"cindex"}, \code{"auc"}, \code{"accuracy"} (higher is better),
+\code{"rmse"} (lower is better), \code{"r2"} (higher is better).}
+
 \item{disjoint}{Logical. Enforce disjoint supports? Default:
 \code{FALSE}.}
+
+\item{schedule}{Character; the gradient-step decay schedule passed to
+\code{\link{orthoMTL}} for every fit. One of \code{"sqrt"} (default),
+\code{"log"}, \code{"const"}, \code{"linear"}. \code{"log"} or
+\code{"const"} typically reach the same optimum in far fewer iterations
+than the default \code{"sqrt"}, which can noticeably speed up the grid
+search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
+trade-offs. Applied uniformly to all configurations (it is not part of the
+tuning grid).}
 
 \item{folds}{An integer vector of length \code{n} assigning each
 training observation to a fold. If \code{NULL}, a 5-fold

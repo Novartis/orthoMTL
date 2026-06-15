@@ -18,6 +18,30 @@
 #'   The penalty is \eqn{\lambda [(1 - \alpha)/2\, \Omega_K(W)^2 + \alpha \|W\|_1]};
 #'   \code{alpha = 0} gives the pure orthogonality penalty and \code{alpha = 1}
 #'   gives a pure Lasso.
+#' @param schedule Character; the gradient-step decay schedule -- how the
+#'   per-iteration scale grows with the iteration index \eqn{i}. The coefficient
+#'   update is \eqn{W \leftarrow W - \texttt{step\_size}\, \nabla /
+#'   (\texttt{scale} \cdot \|\nabla\|)}, so a faster-growing \code{scale} means a
+#'   faster-decaying effective step. One of:
+#'   \describe{
+#'     \item{\code{"sqrt"}}{(default) \eqn{\texttt{scale} = \sqrt{i}}, effective
+#'       step \eqn{\propto 1/\sqrt{i}} -- the classic subgradient schedule and
+#'       the historical hardcoded behaviour.}
+#'     \item{\code{"log"}}{\eqn{\texttt{scale} = \log(i) + 1} (slow decay).}
+#'     \item{\code{"const"}}{\eqn{\texttt{scale} = 1} (no decay).}
+#'     \item{\code{"linear"}}{\eqn{\texttt{scale} = i}, effective step
+#'       \eqn{\propto 1/i} (Robbins-Monro).}
+#'   }
+#'   The default \code{"sqrt"} is retained for backward compatibility: it
+#'   reproduces previously published results exactly. An A/B study shipped with
+#'   the package (\code{validation/ab_s02_gradient_schedule.R}) found that
+#'   \code{"sqrt"} reaches the \emph{correct} optimum but converges to it roughly
+#'   12--17x slower than \code{"log"} and \code{"const"} (which reach the same
+#'   objective in a small fraction of the iterations), while \code{"linear"}
+#'   decays too aggressively and can stall short of the optimum. Prefer
+#'   \code{"log"} or \code{"const"} when convergence speed matters; note that
+#'   changing the schedule changes the optimisation path and therefore the exact
+#'   coefficients, so it should not be altered when reproducing published runs.
 #' @param survival a logical value indicating whether survival analysis should be performed, default is FALSE
 #' @param censored.mat a matrix indicating whether observations are censored, used only if survival=TRUE
 #' @param tol Convergence tolerance. The algorithm stops when the
@@ -48,9 +72,10 @@
 #   Effective regularisation strength depends on sample size.
 #   Investigate impact on SOLAR-1 results and simulated vignette.
 
-# TODO(v1.1): Gradient scaling by sqrt(i) is hardcoded.
-#   Consider exposing as a parameter or offering alternative schedules.
-#   Investigate impact on convergence speed and final coefficients.
+# RESOLVED (S-02, 2026-06): the gradient scaling is now the `schedule`
+#   parameter (default "sqrt" reproduces the historical hardcoded behaviour).
+#   The A/B in validation/ab_s02_gradient_schedule.R quantifies the trade-off:
+#   "log"/"const" reach the same optimum far faster; "linear" can stall.
 
 # TODO(v1.1): stop_no_improve default (100) may be insufficient for
 #   high-dimensional or survival problems. Investigate on SOLAR-1 data.
@@ -65,8 +90,11 @@ orthoMTL <- function(X, Y, lambda = 1,
                      W_0 = NULL, seed = 42,
                      K = NULL, disjoint = FALSE, logistic = FALSE,
                      alpha = 0,
+                     schedule = c("sqrt", "log", "const", "linear"),
                      survival = FALSE, censored.mat = NULL,
                      verbose = 0){
+  # gradient-step decay schedule (S-02); default "sqrt" = historical behaviour
+  schedule <- match.arg(schedule)
   # initiate the random seed
   set.seed(seed)
 
@@ -151,8 +179,12 @@ orthoMTL <- function(X, Y, lambda = 1,
       }else{stop("A matrix with censoring information needs to be provided\n")}
     }
 
-    #compute a scale for gradient descent
-    scale = sqrt(i)
+    #compute a scale for gradient descent (S-02: `schedule` controls the decay)
+    scale = switch(schedule,
+                   sqrt   = sqrt(i),
+                   log    = log(i) + 1,
+                   const  = 1,
+                   linear = i)
 
     # orthogonality penalty matrix (V^T V for disjoint, W^T W otherwise)
     if (disjoint) {
@@ -259,6 +291,7 @@ orthoMTL <- function(X, Y, lambda = 1,
       hyperparameters = list(
         lambda          = lambda,
         alpha           = alpha,
+        schedule        = schedule,
         step_size       = step_size,
         tol             = tol,
         stop_no_improve = stop_no_improve,

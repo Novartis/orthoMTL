@@ -25,8 +25,24 @@
 #'   constraint matrix \code{K} to search.
 #' @param survival Logical. Use censored survival loss? Default:
 #'   \code{TRUE}.
+#' @param logistic Logical. Fit logistic (classification) models?
+#'   Passed through to \code{\link{orthoMTL}}. Default: \code{FALSE}.
+#' @param metric Character; the scoring metric maximised/minimised over
+#'   the grid, or \code{NULL} (default) to choose automatically by mode:
+#'   \code{"cindex"} when \code{survival = TRUE}, \code{"auc"} when
+#'   \code{logistic = TRUE}, otherwise \code{"rmse"}. Supported values:
+#'   \code{"cindex"}, \code{"auc"}, \code{"accuracy"} (higher is better),
+#'   \code{"rmse"} (lower is better), \code{"r2"} (higher is better).
 #' @param disjoint Logical. Enforce disjoint supports? Default:
 #'   \code{FALSE}.
+#' @param schedule Character; the gradient-step decay schedule passed to
+#'   \code{\link{orthoMTL}} for every fit. One of \code{"sqrt"} (default),
+#'   \code{"log"}, \code{"const"}, \code{"linear"}. \code{"log"} or
+#'   \code{"const"} typically reach the same optimum in far fewer iterations
+#'   than the default \code{"sqrt"}, which can noticeably speed up the grid
+#'   search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
+#'   trade-offs. Applied uniformly to all configurations (it is not part of the
+#'   tuning grid).
 #' @param folds An integer vector of length \code{n} assigning each
 #'   training observation to a fold. If \code{NULL}, a 5-fold
 #'   assignment is generated with a warning.
@@ -106,13 +122,17 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         stepsizes = c(0.1, 0.5),
                         diag_vals = c(0.5, 1),
                         survival = TRUE,
+                        logistic = FALSE,
+                        metric = NULL,
                         disjoint = FALSE,
+                        schedule = c("sqrt", "log", "const", "linear"),
                         folds = NULL,
                         n_cores = 2,
                         seed = 42,
                         verbose = TRUE) {
 
   cl <- match.call()
+  schedule <- match.arg(schedule)
 
   # ---------------------------
   # Input validation
@@ -164,6 +184,12 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
   if (any(alphas < 0 | alphas > 1)) {
     stop("All 'alphas' must lie in [0, 1].", call. = FALSE)
   }
+
+  # ---------------------------
+  # Resolve scoring metric (mode-aware default)
+  # ---------------------------
+  scorer <- .resolve_cv_metric(metric, survival = survival,
+                               logistic = logistic)
 
   # ---------------------------
   # Build configuration grid
@@ -239,6 +265,8 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
         K            = K_local,
         disjoint     = disjoint,
         survival     = survival,
+        logistic     = logistic,
+        schedule     = schedule,
         censored.mat = if (survival) W.train[idx_train, , drop = FALSE] else NULL,
         seed         = seed,
         verbose      = 0
@@ -255,8 +283,8 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
         pred_val <- t(apply(pred_val, 1, nnmaxheap_C))
       }
 
-      # Compute C-index on validation fold
-      fold_scores[f_idx] <- cindex_mtl(Y_val, pred_val)
+      # Score on validation fold with the resolved metric
+      fold_scores[f_idx] <- scorer$fn(Y_val, pred_val)
     }
 
     # Return mean CV score for this config
@@ -268,26 +296,34 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
   # ---------------------------
   config_grid$cv_score <- cv_scores
 
-  # Joint argmax over flattened grid
-  best_idx <- which.max(config_grid$cv_score)
+  # Joint optimum over flattened grid (direction depends on the metric)
+  best_idx <- if (scorer$maximize) {
+    which.max(config_grid$cv_score)
+  } else {
+    which.min(config_grid$cv_score)
+  }
   best_cfg <- config_grid[best_idx, ]
 
   if (verbose) {
     cat("  Done.\n")
-    cat("  Best CV C-index:", format(best_cfg$cv_score, digits = 4), "\n")
+    cat("  Best CV ", scorer$name, ": ",
+        format(best_cfg$cv_score, digits = 4), "\n", sep = "")
   }
 
-  # Check for failed fits (cv_score = 0 or NA)
-  n_failed <- sum(is.na(cv_scores) | cv_scores == 0)
+  # Check for failed fits. NA always indicates a failure; an exact 0 is
+  # suspicious only for the "higher-is-better" metrics (a 0 RMSE is perfect).
+  n_failed <- sum(is.na(cv_scores) |
+                    (scorer$maximize & cv_scores == 0))
   if (n_failed > 0) {
     warning(n_failed, " of ", n_configs,
-            " configurations returned NA or zero C-index. ",
+            " configurations returned NA or a degenerate score. ",
             "This may indicate failed convergence or degenerate folds.",
             call. = FALSE)
   }
 
-  # Sort results by cv_score descending
-  config_grid <- config_grid[order(config_grid$cv_score, decreasing = TRUE), ]
+  # Sort results best-first (direction depends on the metric)
+  config_grid <- config_grid[order(config_grid$cv_score,
+                                   decreasing = scorer$maximize), ]
   rownames(config_grid) <- NULL
 
   # ---------------------------
@@ -306,8 +342,39 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
       folds     = folds,
       n_configs = n_configs,
       n_folds   = n_folds,
+      metric    = scorer$name,
       call      = cl
     ),
     class = "cv_orthoMTL"
+  )
+}
+
+
+# ---------------------------------------------------------------------
+# Internal: resolve the CV scoring metric (GEN-02)
+#
+# Returns a list with the metric name, the scoring function fn(true,
+# pred), and `maximize` (TRUE if higher is better). When `metric` is
+# NULL the default is chosen from the fitting mode.
+# ---------------------------------------------------------------------
+.resolve_cv_metric <- function(metric, survival, logistic) {
+  if (is.null(metric)) {
+    metric <- if (survival) {
+      "cindex"
+    } else if (logistic) {
+      "auc"
+    } else {
+      "rmse"
+    }
+  }
+  metric <- match.arg(metric,
+                      c("cindex", "auc", "accuracy", "rmse", "r2"))
+
+  switch(metric,
+    cindex   = list(name = "cindex",   fn = cindex_mtl,   maximize = TRUE),
+    auc      = list(name = "auc",      fn = auc_mtl,      maximize = TRUE),
+    accuracy = list(name = "accuracy", fn = accuracy_mtl, maximize = TRUE),
+    r2       = list(name = "r2",       fn = r2_mtl,       maximize = TRUE),
+    rmse     = list(name = "rmse",     fn = rmse_mtl,     maximize = FALSE)
   )
 }
