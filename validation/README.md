@@ -31,17 +31,16 @@ R CMD INSTALL .
 Behaviour-comparison scripts for the `S-*` KANBAN cards (loss/penalty
 normalisation, convergence budget, init asymmetry, gradient schedule). Each
 compares the **shipped** behaviour (A) against a **candidate** (B) on the
-same data and prints a verdict; none modifies the package. Three are driven
-entirely through existing arguments; `ab_s02` uses a faithful **mirror** of
-the core loop that is first gated bit-for-bit against the installed solver
-(`max|B_pkg - B_mirror| = 0`) before any schedule is varied.
+same data and prints a verdict; none modifies the package. All four are
+driven entirely through existing arguments (`ab_s02` via the `schedule`
+argument that the S-02 study motivated and that now ships in `orthoMTL()`).
 
 | Script | Card | Finding |
 |---|---|---|
 | `ab_s01_normalisation.R` | S-01 | **Keep.** The per-observation loss normalisation gives *active, n-stable* shrinkage; dividing the penalty by `n` instead makes regularisation wash out as `n` grows. Standard glmnet convention, not a defect. |
 | `ab_s04_convergence.R` | S-04 | **Defaults adequate.** Extra patience leaves the objective unchanged and the iteration cap never binds, even at p>n, λ=1e-4, k=16. The lever (if any) is `max_iter`, not `stop_no_improve`. |
 | `ab_s05_init.R` | S-05 | **Asymmetry necessary.** `disjoint`+zero init is a fixed point of `proj_disjoint()` (stays pinned at 0); non-disjoint is deterministic at zero and random init only adds seed noise. |
-| `ab_s02_gradient_schedule.R` | S-02 | **Performance opportunity (flagged).** `sqrt(i)` is correct but ~12–17× slower than `log`/`const` to the *same* optimum (`linear`=1/i stalls). Exposing `schedule` could speed convergence; changing the default would move published numerics. |
+| `ab_s02_gradient_schedule.R` | S-02 | **Implemented as `schedule=`.** `sqrt(i)` is correct but ~12–17× slower than `log`/`const` to the *same* optimum (`linear`=1/i stalls). Now selectable via `orthoMTL(schedule=)`; default `"sqrt"` preserves published numerics. |
 
 All four run against the **installed** package only:
 

@@ -21,6 +21,17 @@ scaffolding (previously survival-only):
   `"regression"` and `"classification"` responses in addition to
   `"survival"` (the default).
 
+## Solver
+
+* **Gradient-step schedule exposed** (`schedule` argument to `orthoMTL()`).
+  The previously hardcoded `sqrt(i)` decay is now `schedule = "sqrt"` (the
+  default, reproducing prior results exactly); `"log"`, `"const"`, and
+  `"linear"` are also available. An A/B study
+  (`validation/ab_s02_gradient_schedule.R`) found `"log"`/`"const"` reach the
+  same optimum ~12--17x faster than `"sqrt"`, while `"linear"` can stall.
+  Changing the schedule changes the optimisation path and the exact
+  coefficients, so the default is unchanged.
+
 ## Behaviour change
 
 * `cv_orthoMTL(survival = FALSE)` previously scored every fold with the
