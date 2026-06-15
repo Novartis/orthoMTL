@@ -35,6 +35,14 @@
 #'   \code{"rmse"} (lower is better), \code{"r2"} (higher is better).
 #' @param disjoint Logical. Enforce disjoint supports? Default:
 #'   \code{FALSE}.
+#' @param schedule Character; the gradient-step decay schedule passed to
+#'   \code{\link{orthoMTL}} for every fit. One of \code{"sqrt"} (default),
+#'   \code{"log"}, \code{"const"}, \code{"linear"}. \code{"log"} or
+#'   \code{"const"} typically reach the same optimum in far fewer iterations
+#'   than the default \code{"sqrt"}, which can noticeably speed up the grid
+#'   search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
+#'   trade-offs. Applied uniformly to all configurations (it is not part of the
+#'   tuning grid).
 #' @param folds An integer vector of length \code{n} assigning each
 #'   training observation to a fold. If \code{NULL}, a 5-fold
 #'   assignment is generated with a warning.
@@ -117,12 +125,14 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         logistic = FALSE,
                         metric = NULL,
                         disjoint = FALSE,
+                        schedule = c("sqrt", "log", "const", "linear"),
                         folds = NULL,
                         n_cores = 2,
                         seed = 42,
                         verbose = TRUE) {
 
   cl <- match.call()
+  schedule <- match.arg(schedule)
 
   # ---------------------------
   # Input validation
@@ -256,6 +266,7 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
         disjoint     = disjoint,
         survival     = survival,
         logistic     = logistic,
+        schedule     = schedule,
         censored.mat = if (survival) W.train[idx_train, , drop = FALSE] else NULL,
         seed         = seed,
         verbose      = 0

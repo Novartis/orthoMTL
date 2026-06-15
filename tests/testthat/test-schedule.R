@@ -57,3 +57,40 @@ test_that("invalid schedule is rejected", {
   expect_error(orthoMTL(d$X, d$Y, lambda = 1e-2, schedule = "bogus"),
                "'arg'")
 })
+
+test_that("cv_orthoMTL accepts a schedule and rejects a bad one", {
+  d <- make_reg(n = 30, p = 4, n_tasks = 2)
+  folds <- rep(1:2, length.out = nrow(d$X))
+  cv_res <- cv_orthoMTL(
+    X.train = d$X, Y.train = d$Y, schedule = "log",
+    lambdas = c(0.01), stepsizes = c(0.1), diag_vals = c(1),
+    survival = FALSE, folds = folds, n_cores = 1, verbose = FALSE
+  )
+  expect_s3_class(cv_res, "cv_orthoMTL")
+  expect_true(is.finite(cv_res$best$cv_score))
+
+  expect_error(
+    cv_orthoMTL(X.train = d$X, Y.train = d$Y, schedule = "bogus",
+                lambdas = 0.01, stepsizes = 0.1, diag_vals = 1,
+                survival = FALSE, folds = folds, n_cores = 1, verbose = FALSE),
+    "'arg'"
+  )
+})
+
+test_that("bootstrap_orthoMTL accepts a schedule and rejects a bad one", {
+  d <- make_reg(n = 30, p = 4, n_tasks = 2)
+  colnames(d$X) <- paste0("V", seq_len(ncol(d$X)))
+  boot <- bootstrap_orthoMTL(
+    X = d$X, Y = d$Y, lambda = 0.01, schedule = "const",
+    survival = FALSE, n_repeats = 3, n_cores = 1, verbose = FALSE
+  )
+  expect_s3_class(boot, "bootstrap_orthoMTL")
+  expect_length(boot$obj_real, 3)
+
+  expect_error(
+    bootstrap_orthoMTL(X = d$X, Y = d$Y, lambda = 0.01, schedule = "bogus",
+                       survival = FALSE, n_repeats = 2, n_cores = 1,
+                       verbose = FALSE),
+    "'arg'"
+  )
+})

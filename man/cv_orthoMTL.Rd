@@ -17,6 +17,7 @@ cv_orthoMTL(
   logistic = FALSE,
   metric = NULL,
   disjoint = FALSE,
+  schedule = c("sqrt", "log", "const", "linear"),
   folds = NULL,
   n_cores = 2,
   seed = 42,
@@ -65,6 +66,15 @@ the grid, or \code{NULL} (default) to choose automatically by mode:
 
 \item{disjoint}{Logical. Enforce disjoint supports? Default:
 \code{FALSE}.}
+
+\item{schedule}{Character; the gradient-step decay schedule passed to
+\code{\link{orthoMTL}} for every fit. One of \code{"sqrt"} (default),
+\code{"log"}, \code{"const"}, \code{"linear"}. \code{"log"} or
+\code{"const"} typically reach the same optimum in far fewer iterations
+than the default \code{"sqrt"}, which can noticeably speed up the grid
+search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
+trade-offs. Applied uniformly to all configurations (it is not part of the
+tuning grid).}
 
 \item{folds}{An integer vector of length \code{n} assigning each
 training observation to a fold. If \code{NULL}, a 5-fold

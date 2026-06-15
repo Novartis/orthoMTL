@@ -12,6 +12,7 @@ bootstrap_orthoMTL(
   step_size = 0.1,
   K = NULL,
   disjoint = FALSE,
+  schedule = c("sqrt", "log", "const", "linear"),
   survival = FALSE,
   censored.mat = NULL,
   n_repeats = 100,
@@ -40,6 +41,14 @@ through to \code{\link{orthoMTL}}. Default: \code{0}.}
 
 \item{disjoint}{Logical. Enforce disjoint supports? Default:
 \code{FALSE}.}
+
+\item{schedule}{Character; the gradient-step decay schedule passed to
+\code{\link{orthoMTL}} for every resample/permutation fit. One of
+\code{"sqrt"} (default), \code{"log"}, \code{"const"}, \code{"linear"}.
+Because bootstrap refits the model many times, switching to \code{"log"} or
+\code{"const"} -- which reach the same optimum in far fewer iterations --
+can substantially cut total runtime; see the \code{schedule} argument of
+\code{\link{orthoMTL}} for details.}
 
 \item{survival}{Logical. Use censored survival loss? Default:
 \code{FALSE}.}

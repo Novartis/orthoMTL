@@ -19,6 +19,13 @@
 #'   \code{numTasks x numTasks}. Default: \code{NULL} (identity).
 #' @param disjoint Logical. Enforce disjoint supports? Default:
 #'   \code{FALSE}.
+#' @param schedule Character; the gradient-step decay schedule passed to
+#'   \code{\link{orthoMTL}} for every resample/permutation fit. One of
+#'   \code{"sqrt"} (default), \code{"log"}, \code{"const"}, \code{"linear"}.
+#'   Because bootstrap refits the model many times, switching to \code{"log"} or
+#'   \code{"const"} -- which reach the same optimum in far fewer iterations --
+#'   can substantially cut total runtime; see the \code{schedule} argument of
+#'   \code{\link{orthoMTL}} for details.
 #' @param survival Logical. Use censored survival loss? Default:
 #'   \code{FALSE}.
 #' @param censored.mat A numeric indicator matrix of dimensions
@@ -108,6 +115,7 @@ bootstrap_orthoMTL <- function(X, Y,
                                step_size = 0.1,
                                K = NULL,
                                disjoint = FALSE,
+                               schedule = c("sqrt", "log", "const", "linear"),
                                survival = FALSE,
                                censored.mat = NULL,
                                n_repeats = 100,
@@ -116,6 +124,7 @@ bootstrap_orthoMTL <- function(X, Y,
                                verbose = TRUE) {
 
   cl <- match.call()
+  schedule <- match.arg(schedule)
 
   # ---------------------------
   # Input validation
@@ -191,6 +200,7 @@ bootstrap_orthoMTL <- function(X, Y,
       step_size    = step_size,
       K            = K,
       disjoint     = disjoint,
+      schedule     = schedule,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = i,
@@ -233,6 +243,7 @@ bootstrap_orthoMTL <- function(X, Y,
       step_size    = step_size,
       K            = K,
       disjoint     = disjoint,
+      schedule     = schedule,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = i,

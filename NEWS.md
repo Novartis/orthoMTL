@@ -30,7 +30,9 @@ scaffolding (previously survival-only):
   (`validation/ab_s02_gradient_schedule.R`) found `"log"`/`"const"` reach the
   same optimum ~12--17x faster than `"sqrt"`, while `"linear"` can stall.
   Changing the schedule changes the optimisation path and the exact
-  coefficients, so the default is unchanged.
+  coefficients, so the default is unchanged. `cv_orthoMTL()` and
+  `bootstrap_orthoMTL()` gained a matching `schedule` argument (passed to every
+  fit), so grid search and bootstrap can use the faster schedules too.
 
 ## Behaviour change
 
