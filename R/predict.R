@@ -8,6 +8,18 @@
 #' @param newdata A numeric matrix of new observations with dimensions
 #'   \code{n_new x p}. Column names are used for feature alignment if
 #'   available in the fitted object.
+#' @param type Character; scale of the returned predictions. One of:
+#'   \describe{
+#'     \item{\code{"link"}}{(default) the raw linear predictor
+#'       \eqn{X B} (after the survival monotonicity projection, if
+#'       applicable). Preserves the historical behaviour.}
+#'     \item{\code{"response"}}{for \code{logistic} fits, the sigmoid
+#'       \eqn{1 / (1 + e^{-XB})} giving \eqn{P(Y = +1)}; for non-logistic
+#'       fits identical to \code{"link"}.}
+#'     \item{\code{"class"}}{for \code{logistic} fits, the predicted
+#'       class label in \eqn{\{-1, +1\}} (\code{sign(XB)}, with 0 mapped
+#'       to \code{+1}). Errors for non-logistic fits.}
+#'   }
 #' @param ... Additional arguments (currently ignored).
 #'
 #' @return A numeric matrix of predictions with dimensions
@@ -48,7 +60,15 @@
 #' colnames(X_new) <- paste0("V", seq_len(p))
 #' preds <- predict(fit, newdata = X_new)
 #' dim(preds)
-predict.orthoMTL <- function(object, newdata, ...) {
+predict.orthoMTL <- function(object, newdata,
+                             type = c("link", "response", "class"), ...) {
+
+  type <- match.arg(type)
+  is_logistic <- isTRUE(object$hyperparameters$logistic)
+  if (type == "class" && !is_logistic) {
+    stop("type = \"class\" is only available for logistic ",
+         "(classification) fits.", call. = FALSE)
+  }
 
   # --- Column alignment ---
   if (!is.null(object$feature_names)) {
@@ -99,6 +119,15 @@ predict.orthoMTL <- function(object, newdata, ...) {
   #   Investigate impact on SOLAR-1 results and simulated vignette.
   if (isTRUE(object$hyperparameters$survival)) {
     Mt <- t(apply(Mt, 1, nnmaxheap_C))
+  }
+
+  # --- Response-scale / class transforms (logistic fits only) ---
+  if (is_logistic && type == "response") {
+    Mt <- 1 / (1 + exp(-Mt))
+  } else if (type == "class") {
+    # sign(0) is 0; map the boundary to the positive class for a clean
+    # {-1, +1} output.
+    Mt <- ifelse(Mt >= 0, 1, -1)
   }
 
   # --- Label output ---

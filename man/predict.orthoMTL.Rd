@@ -4,7 +4,7 @@
 \alias{predict.orthoMTL}
 \title{Predict from an orthoMTL Model}
 \usage{
-\method{predict}{orthoMTL}(object, newdata, ...)
+\method{predict}{orthoMTL}(object, newdata, type = c("link", "response", "class"), ...)
 }
 \arguments{
 \item{object}{A fitted model object of class \code{"orthoMTL"}.}
@@ -12,6 +12,19 @@
 \item{newdata}{A numeric matrix of new observations with dimensions
 \code{n_new x p}. Column names are used for feature alignment if
 available in the fitted object.}
+
+\item{type}{Character; scale of the returned predictions. One of:
+\describe{
+  \item{\code{"link"}}{(default) the raw linear predictor
+    \eqn{X B} (after the survival monotonicity projection, if
+    applicable). Preserves the historical behaviour.}
+  \item{\code{"response"}}{for \code{logistic} fits, the sigmoid
+    \eqn{1 / (1 + e^{-XB})} giving \eqn{P(Y = +1)}; for non-logistic
+    fits identical to \code{"link"}.}
+  \item{\code{"class"}}{for \code{logistic} fits, the predicted
+    class label in \eqn{\{-1, +1\}} (\code{sign(XB)}, with 0 mapped
+    to \code{+1}). Errors for non-logistic fits.}
+}}
 
 \item{...}{Additional arguments (currently ignored).}
 }

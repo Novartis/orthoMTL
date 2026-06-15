@@ -110,3 +110,158 @@ cindex_mtl <- function(true.label.mat, pred.label.mat) {
 
   return((sum1 + sum2) / (sum3 + sum4))
 }
+
+
+# ---------------------------------------------------------------------
+# General-purpose metrics for non-survival modes (GEN-01)
+#
+# These complement the survival-specific cindex_mtl for the regression
+# and classification use cases of orthoMTL. All operate cell-wise on the
+# n x numTasks true/predicted matrices, pooling over every non-NA cell
+# (so a single NA-masked or fully observed matrix both work). They never
+# touch cindex_mtl, which stays faithful to the MTLSA reference.
+# ---------------------------------------------------------------------
+
+# Internal: flatten true/pred matrices to aligned non-NA vectors.
+.mtl_pool <- function(true.mat, pred.mat) {
+  true.mat <- as.matrix(true.mat)
+  pred.mat <- as.matrix(pred.mat)
+  if (!all(dim(true.mat) == dim(pred.mat))) {
+    stop("true and predicted matrices must have identical dimensions.",
+         call. = FALSE)
+  }
+  t_vec <- as.numeric(true.mat)
+  p_vec <- as.numeric(pred.mat)
+  keep <- !is.na(t_vec) & !is.na(p_vec)
+  if (!any(keep)) {
+    stop("No non-NA cells to evaluate.", call. = FALSE)
+  }
+  list(true = t_vec[keep], pred = p_vec[keep])
+}
+
+#' Root Mean Squared Error for Multi-Task Regression
+#'
+#' Pooled RMSE over every non-\code{NA} cell of the true/predicted
+#' matrices, for \code{orthoMTL} fits in regression mode
+#' (\code{logistic = FALSE}, \code{survival = FALSE}).
+#'
+#' @param true.label.mat A numeric matrix of true responses
+#'   (\code{n x numTasks}). \code{NA} cells are ignored.
+#' @param pred.label.mat A numeric matrix of predictions of the same
+#'   dimensions (as produced by \code{\link{predict.orthoMTL}}).
+#'
+#' @return A single non-negative numeric value (lower is better).
+#'
+#' @seealso \code{\link{r2_mtl}}, \code{\link{cindex_mtl}}
+#' @export
+#'
+#' @examples
+#' set.seed(1)
+#' Y <- matrix(rnorm(30), 10, 3)
+#' P <- Y + matrix(rnorm(30, sd = 0.1), 10, 3)
+#' rmse_mtl(Y, P)
+rmse_mtl <- function(true.label.mat, pred.label.mat) {
+  v <- .mtl_pool(true.label.mat, pred.label.mat)
+  sqrt(mean((v$true - v$pred)^2))
+}
+
+#' Coefficient of Determination (R-squared) for Multi-Task Regression
+#'
+#' Pooled \eqn{R^2 = 1 - SS_{res} / SS_{tot}} over every non-\code{NA}
+#' cell, for \code{orthoMTL} fits in regression mode. \eqn{SS_{tot}} uses
+#' the global mean of the pooled true values.
+#'
+#' @inheritParams rmse_mtl
+#'
+#' @return A single numeric value (higher is better; 1 = perfect).
+#'   Can be negative when predictions are worse than the mean.
+#'
+#' @seealso \code{\link{rmse_mtl}}, \code{\link{cindex_mtl}}
+#' @export
+#'
+#' @examples
+#' set.seed(1)
+#' Y <- matrix(rnorm(30), 10, 3)
+#' P <- Y + matrix(rnorm(30, sd = 0.1), 10, 3)
+#' r2_mtl(Y, P)
+r2_mtl <- function(true.label.mat, pred.label.mat) {
+  v <- .mtl_pool(true.label.mat, pred.label.mat)
+  ss_res <- sum((v$true - v$pred)^2)
+  ss_tot <- sum((v$true - mean(v$true))^2)
+  if (ss_tot == 0) {
+    stop("Cannot compute R-squared: true values have zero variance.",
+         call. = FALSE)
+  }
+  1 - ss_res / ss_tot
+}
+
+#' Classification Accuracy for Multi-Task Predictions
+#'
+#' Pooled fraction of correctly classified non-\code{NA} cells, for
+#' \code{orthoMTL} fits in classification mode (\code{logistic = TRUE}).
+#' A cell is positive when its true label is \code{> 0} and predicted
+#' positive when its score is \code{> 0}. This works for both the
+#' \eqn{\{-1, +1\}} encoding the solver optimises and a \eqn{\{0, 1\}}
+#' encoding, and for raw \code{"link"} scores or \code{"response"}
+#' probabilities (threshold 0.5 corresponds to a link of 0... see note).
+#'
+#' @inheritParams rmse_mtl
+#' @param threshold Decision threshold applied to \code{pred.label.mat}.
+#'   Default \code{0} matches raw link scores; pass \code{0.5} for
+#'   probabilities from \code{predict(..., type = "response")}.
+#'
+#' @return A single numeric value in \code{[0, 1]} (higher is better).
+#'
+#' @seealso \code{\link{auc_mtl}}, \code{\link{cindex_mtl}}
+#' @export
+#'
+#' @examples
+#' set.seed(1)
+#' Y <- matrix(sample(c(-1, 1), 30, replace = TRUE), 10, 3)
+#' P <- Y * abs(matrix(rnorm(30), 10, 3))   # mostly correct signs
+#' accuracy_mtl(Y, P)
+accuracy_mtl <- function(true.label.mat, pred.label.mat, threshold = 0) {
+  v <- .mtl_pool(true.label.mat, pred.label.mat)
+  true_pos <- v$true > 0
+  pred_pos <- v$pred > threshold
+  mean(true_pos == pred_pos)
+}
+
+#' Area Under the ROC Curve for Multi-Task Predictions
+#'
+#' Pooled AUC over every non-\code{NA} cell, computed via the
+#' Mann-Whitney U statistic (with 0.5 credit for ties), for
+#' \code{orthoMTL} fits in classification mode. The positive class is
+#' defined by true label \code{> 0}. AUC is invariant to monotone
+#' transforms, so raw \code{"link"} scores and \code{"response"}
+#' probabilities give identical results.
+#'
+#' @inheritParams rmse_mtl
+#'
+#' @return A single numeric value in \code{[0, 1]} (higher is better;
+#'   0.5 = random).
+#'
+#' @seealso \code{\link{accuracy_mtl}}, \code{\link{cindex_mtl}}
+#' @export
+#'
+#' @examples
+#' set.seed(1)
+#' Y <- matrix(sample(c(-1, 1), 30, replace = TRUE), 10, 3)
+#' P <- Y + matrix(rnorm(30), 10, 3)
+#' auc_mtl(Y, P)
+auc_mtl <- function(true.label.mat, pred.label.mat) {
+  v <- .mtl_pool(true.label.mat, pred.label.mat)
+  pos <- v$pred[v$true > 0]
+  neg <- v$pred[v$true <= 0]
+  n_pos <- length(pos)
+  n_neg <- length(neg)
+  if (n_pos == 0 || n_neg == 0) {
+    stop("AUC requires both positive (label > 0) and negative cells.",
+         call. = FALSE)
+  }
+  # Mann-Whitney U via rank-sum, with 0.5 credit for ties.
+  r <- rank(c(pos, neg))
+  auc <- (sum(r[seq_len(n_pos)]) - n_pos * (n_pos + 1) / 2) /
+    (n_pos * n_neg)
+  auc
+}

@@ -73,6 +73,39 @@ summary(fit)
 plot_heatmap(fit)
 ```
 
+### Regression and classification
+
+The same solver handles plain multi-task regression and classification —
+survival is just one of three modes. Select the mode on the solver with the
+`logistic` / `survival` flags, score with the matching metric, and (for CV)
+let `cv_orthoMTL()` pick the metric automatically.
+
+```r
+library(orthoMTL)
+
+# --- Multi-task regression ---
+sim <- simulate_mtl(n = 200, p = 20, n_signals = 5,
+                    mode = "regression", seed = 42)
+fit <- orthoMTL(sim$X, sim$Y, lambda = 1e-3)      # logistic = survival = FALSE
+pred <- predict(fit, newdata = sim$X)             # type = "link"
+rmse_mtl(sim$Y, pred)
+r2_mtl(sim$Y, pred)
+
+# --- Multi-task classification (labels in {-1, +1}) ---
+sim <- simulate_mtl(n = 200, p = 20, n_signals = 5,
+                    mode = "classification", seed = 42)
+fit <- orthoMTL(sim$X, sim$Y, lambda = 1e-3, logistic = TRUE)
+prob <- predict(fit, newdata = sim$X, type = "response")   # P(Y = +1)
+cls  <- predict(fit, newdata = sim$X, type = "class")      # {-1, +1}
+auc_mtl(sim$Y, predict(fit, newdata = sim$X))              # AUC on link scores
+accuracy_mtl(sim$Y, predict(fit, newdata = sim$X))
+
+# CV picks the metric by mode (cindex / auc / rmse) unless overridden
+cv <- cv_orthoMTL(sim$X, sim$Y, logistic = TRUE, survival = FALSE,
+                  lambdas = c(1e-3, 1e-2), n_cores = 1)
+cv$best
+```
+
 For a full walkthrough — including cross-validation, bootstrap inference, and
 comparison with Cox — see the package vignette:
 
@@ -91,7 +124,10 @@ vignette("introduction", package = "orthoMTL")
 | `create_longitudinal_labels()` | Survival → binary label matrix |
 | `create_indicator_matrix()` | Censoring indicator matrix |
 | `create_constraint_matrix()` | Diffusion constraint matrix for tasks |
-| `predict()`, `coef()` | Predictions and coefficient extraction |
+| `predict()`, `coef()` | Predictions (`type = "link"/"response"/"class"`) and coefficients |
+| `cindex_mtl()` | Survival concordance index |
+| `rmse_mtl()`, `r2_mtl()` | Regression metrics |
+| `accuracy_mtl()`, `auc_mtl()` | Classification metrics |
 | `plot_heatmap()`, `plot_correlation()`, `plot_bootstrap()` | Visualisation |
 
 ## Citation

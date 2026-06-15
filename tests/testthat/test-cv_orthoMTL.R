@@ -64,8 +64,11 @@ test_that("cv_orthoMTL searches multiple configurations", {
   expect_equal(cv_res$n_configs, 8)
   expect_equal(nrow(cv_res$results), 8)
 
-  # Results should be sorted by cv_score descending
-  expect_true(all(diff(cv_res$results$cv_score) <= 0))
+  # Non-survival default metric is RMSE (lower is better), so results are
+  # sorted best-first == ascending, and the best score is the minimum.
+  expect_equal(cv_res$metric, "rmse")
+  expect_true(all(diff(cv_res$results$cv_score) >= 0))
+  expect_equal(cv_res$best$cv_score, min(cv_res$results$cv_score))
 })
 
 test_that("cv_orthoMTL generates folds with warning when not provided", {
