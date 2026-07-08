@@ -81,7 +81,6 @@
 #' \url{https://hal.science/hal-00985654}
 #'
 #' @aliases orthoMTL-package
-#' @importFrom stats coef predict
 #' @importFrom ggplot2 aes
 #' @importFrom rlang .data
 #' @importFrom stats coef predict rnorm rbeta rbinom rexp runif median

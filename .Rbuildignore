@@ -8,3 +8,8 @@
 ^KANBAN\.md$
 ^CLAUDE\.md$
 ^\.github$
+^cran-comments\.md$
+^\.build_out$
+^\.check_out$
+^\.[^/]*\.R$
+^\.build_path\.txt$
