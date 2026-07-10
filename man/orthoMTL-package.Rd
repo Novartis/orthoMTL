@@ -93,7 +93,12 @@ Disjoint Supports. \emph{ECML-PKDD 2014}.
 \url{https://hal.science/hal-00985654}
 }
 \author{
-\strong{Maintainer}: Kevin Vervier \email{kevin.vervier@novartis.com} (\href{https://orcid.org/0000-0002-8791-5718}{ORCID})
+\strong{Maintainer}: Kevin Vervier \email{kevin.vervier@novartis.com}
+
+Other contributors:
+\itemize{
+  \item Novartis Pharma AG [copyright holder, funder]
+}
 
 }
 \keyword{internal}

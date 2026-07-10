@@ -5,8 +5,7 @@ Version: 0.1.0
 Authors@R: c(
     person("Kevin", "Vervier",
         email = "kevin.vervier@novartis.com",
-        role = c("aut", "cre"),
-        comment = c(ORCID = "0000-0002-8791-5718")),
+        role = c("aut", "cre")),
     person("Novartis Pharma AG", role = c("cph", "fnd")))
 Description: Fits regularised multi-task learning models where relationships
     between tasks are controlled via orthogonality or disjoint-support constraints.
