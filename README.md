@@ -148,4 +148,4 @@ If you use orthoMTL in your work, please cite:
 
 ## License
 
-GPL-3. See [LICENSE](LICENSE).
+GPL-3.
