@@ -362,7 +362,7 @@ across the entire follow-up. orthoMTL produces a coefficient *per
 feature per timepoint*, revealing temporal dynamics that a single number
 cannot capture.
 
-```{r cox-vs-ortho, fig.width=8, fig.height=4}
+```{r cox-vs-ortho, fig.width=8, fig.height=4, eval=requireNamespace("glmnet", quietly = TRUE) && requireNamespace("survival", quietly = TRUE)}
 # Pick the switch feature — most interesting temporal pattern
 switch_feat <- signal_feats[effect_types == "switch"][1]
 
