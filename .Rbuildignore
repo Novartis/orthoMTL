@@ -8,6 +8,7 @@
 ^KANBAN\.md$
 ^CLAUDE\.md$
 ^\.github$
+^\.claude$
 ^cran-comments\.md$
 ^\.build_out$
 ^\.check_out$
