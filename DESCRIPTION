@@ -15,7 +15,7 @@ Description: Fits regularised multi-task learning models where relationships
     effects that standard proportional-hazards models cannot detect.
     Implements the penalty described in Vervier et al. (2014)
     <https://hal.science/hal-00985654>.
-License: GPL-3 + file LICENSE
+License: GPL-3
 Encoding: UTF-8
 Imports:
     parallel,
