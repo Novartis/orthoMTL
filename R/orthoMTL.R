@@ -10,7 +10,11 @@
 #' @param stop_no_improve the number of iterations without improvement in the objective function to trigger convergence, default is 100
 #' @param max_iter the maximum number of iterations, default is 1e+06
 #' @param W_0 a matrix of initial values for the regression coefficients, default is NULL, as not provided and will be randomly attributed
-#' @param seed a random seed for reproducibility, default is 42
+#' @param seed an optional random seed for reproducibility, default is
+#'   \code{NULL} (no seed is set; the ambient RNG state is used as-is).
+#'   Only relevant when \code{W_0} is not provided and \code{disjoint = TRUE},
+#'   since that is the only case where \code{orthoMTL} draws random numbers.
+#'   Pass an integer to make that random initialisation reproducible.
 #' @param K a constraint matrix of weights to adjust the OrthoPen penalty, default is an identity matrix with dimensions numTasks x numTasks
 #' @param disjoint a logical value indicating whether the response variables should have disjoint supports, default is FALSE
 #' @param logistic a logical value indicating whether logistic regression should be used instead of linear regression, default is FALSE
@@ -87,7 +91,7 @@
 orthoMTL <- function(X, Y, lambda = 1,
                      step_size = 0.1, tol = 1e-5,
                      stop_no_improve = 100, max_iter = 1e+06,
-                     W_0 = NULL, seed = 42,
+                     W_0 = NULL, seed = NULL,
                      K = NULL, disjoint = FALSE, logistic = FALSE,
                      alpha = 0,
                      schedule = c("sqrt", "log", "const", "linear"),
@@ -95,8 +99,8 @@ orthoMTL <- function(X, Y, lambda = 1,
                      verbose = 0){
   # gradient-step decay schedule (S-02); default "sqrt" = historical behaviour
   schedule <- match.arg(schedule)
-  # initiate the random seed
-  set.seed(seed)
+  # only touch the RNG state if the caller explicitly asked for reproducibility
+  if (!is.null(seed)) set.seed(seed)
 
   # extract problem dimensions
   if(is.null(X) | is.null(Y)) stop('Training data X and Y need to be provided \n')

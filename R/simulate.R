@@ -42,7 +42,9 @@
 #'   feature effects. Default: \code{0.5}.
 #' @param treatment_effect Effect of treatment on the log-hazard
 #'   (negative = protective). Default: \code{-0.3}.
-#' @param seed Random seed for reproducibility. Default: \code{42}.
+#' @param seed Optional random seed for reproducibility. Default:
+#'   \code{NULL} (no seed is set; the ambient RNG state is used as-is).
+#'   Pass an integer to make the simulated data reproducible.
 #'
 #' @return An object of class \code{"simulated_mtl"} containing:
 #'   \describe{
@@ -155,7 +157,7 @@ simulate_mtl <- function(n = 200,
                          baseline_hazard = 0.05,
                          effect_strength = 0.8,  # was 0.5
                          treatment_effect = -0.3,
-                         seed = 42) {
+                         seed = NULL) {
 
   cl <- match.call()
   mode <- match.arg(mode)
@@ -189,7 +191,7 @@ simulate_mtl <- function(n = 200,
     stop("censoring_max must be positive.", call. = FALSE)
   }
 
-  set.seed(seed)
+  if (!is.null(seed)) set.seed(seed)
 
   numTasks <- length(thresholds)
   n_binary <- p - n_continuous
