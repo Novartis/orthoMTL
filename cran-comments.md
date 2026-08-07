@@ -2,7 +2,16 @@
 
 ## Submission type
 
-Initial CRAN submission of orthoMTL 0.1.0.
+Resubmission of orthoMTL 0.1.0.
+
+This addresses the second round of reviewer feedback (Konstanze Lauseker):
+functions must not call `set.seed()` to a hardcoded value. `orthoMTL()`,
+`cv_orthoMTL()`, `bootstrap_orthoMTL()`, and `simulate_mtl()` all defaulted
+`seed = 42` and called `set.seed()` unconditionally; `seed` now defaults to
+`NULL` and `set.seed()` is only called when the caller supplies a value.
+
+(First-round feedback, an invalid `+ file LICENSE` field, was fixed in the
+prior resubmission.)
 
 ## Test environments
 
@@ -14,9 +23,11 @@ Initial CRAN submission of orthoMTL 0.1.0.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 0 notes
 
-* This is a new submission.
+(A "unable to verify current time" NOTE appears in some local check runs due
+to a network-reachability artifact of the time-verification service; it does
+not reproduce on CRAN's own build infrastructure and is omitted above.)
 
 ## Downstream dependencies
 
