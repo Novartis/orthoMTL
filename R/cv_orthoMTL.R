@@ -48,8 +48,10 @@
 #'   assignment is generated with a warning.
 #' @param n_cores Integer. Number of cores for parallel execution.
 #'   Default: \code{2}.
-#' @param seed Integer. Random seed for reproducibility. Default:
-#'   \code{42}.
+#' @param seed Optional integer random seed for reproducibility. Default:
+#'   \code{NULL} (no seed is set; the ambient RNG state is used as-is).
+#'   Used both for auto-generated fold assignment and for each
+#'   \code{\link{orthoMTL}} fit in the grid.
 #' @param verbose Logical. Print progress information? Default:
 #'   \code{TRUE}.
 #'
@@ -128,7 +130,7 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         schedule = c("sqrt", "log", "const", "linear"),
                         folds = NULL,
                         n_cores = 2,
-                        seed = 42,
+                        seed = NULL,
                         verbose = TRUE) {
 
   cl <- match.call()
@@ -168,7 +170,7 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
   if (is.null(folds)) {
     warning("Cross-validation fold assignment not provided. ",
             "Generating 5-fold assignment.", call. = FALSE)
-    set.seed(seed)
+    if (!is.null(seed)) set.seed(seed)
     folds <- sample(1:5, nrow(X.train), replace = TRUE)
   }
   if (length(folds) != nrow(X.train)) {

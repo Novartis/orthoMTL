@@ -20,7 +20,7 @@ cv_orthoMTL(
   schedule = c("sqrt", "log", "const", "linear"),
   folds = NULL,
   n_cores = 2,
-  seed = 42,
+  seed = NULL,
   verbose = TRUE
 )
 }
@@ -83,8 +83,10 @@ assignment is generated with a warning.}
 \item{n_cores}{Integer. Number of cores for parallel execution.
 Default: \code{2}.}
 
-\item{seed}{Integer. Random seed for reproducibility. Default:
-\code{42}.}
+\item{seed}{Optional integer random seed for reproducibility. Default:
+\code{NULL} (no seed is set; the ambient RNG state is used as-is).
+Used both for auto-generated fold assignment and for each
+\code{\link{orthoMTL}} fit in the grid.}
 
 \item{verbose}{Logical. Print progress information? Default:
 \code{TRUE}.}

@@ -13,7 +13,7 @@ orthoMTL(
   stop_no_improve = 100,
   max_iter = 1e+06,
   W_0 = NULL,
-  seed = 42,
+  seed = NULL,
   K = NULL,
   disjoint = FALSE,
   logistic = FALSE,
@@ -43,7 +43,11 @@ Default: \code{1e-5}.}
 
 \item{W_0}{a matrix of initial values for the regression coefficients, default is NULL, as not provided and will be randomly attributed}
 
-\item{seed}{a random seed for reproducibility, default is 42}
+\item{seed}{an optional random seed for reproducibility, default is
+\code{NULL} (no seed is set; the ambient RNG state is used as-is).
+Only relevant when \code{W_0} is not provided and \code{disjoint = TRUE},
+since that is the only case where \code{orthoMTL} draws random numbers.
+Pass an integer to make that random initialisation reproducible.}
 
 \item{K}{a constraint matrix of weights to adjust the OrthoPen penalty, default is an identity matrix with dimensions numTasks x numTasks}
 

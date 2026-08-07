@@ -16,7 +16,7 @@ simulate_mtl(
   baseline_hazard = 0.05,
   effect_strength = 0.8,
   treatment_effect = -0.3,
-  seed = 42
+  seed = NULL
 )
 }
 \arguments{
@@ -66,7 +66,9 @@ feature effects. Default: \code{0.5}.}
 \item{treatment_effect}{Effect of treatment on the log-hazard
 (negative = protective). Default: \code{-0.3}.}
 
-\item{seed}{Random seed for reproducibility. Default: \code{42}.}
+\item{seed}{Optional random seed for reproducibility. Default:
+\code{NULL} (no seed is set; the ambient RNG state is used as-is).
+Pass an integer to make the simulated data reproducible.}
 }
 \value{
 An object of class \code{"simulated_mtl"} containing:

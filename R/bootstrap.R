@@ -34,10 +34,11 @@
 #'   \code{100}.
 #' @param n_cores Number of cores for parallel execution. Default:
 #'   \code{2}.
-#' @param seed Base random seed. Each repeat uses \code{set.seed(i)}
-#'   for \code{i} in \code{1:n_repeats} to ensure reproducibility.
-#'   Default: \code{42} (unused directly; individual repeats use
-#'   their index as seed).
+#' @param seed Optional base random seed. Default: \code{NULL} (no seed
+#'   is set; repeats vary via the ambient RNG state and the run is not
+#'   reproducible). If supplied, repeat \code{i} uses
+#'   \code{set.seed(seed + i)} for \code{i} in \code{1:n_repeats}, so the
+#'   whole run becomes reproducible while still varying across repeats.
 #' @param verbose Logical. Print progress information? Default:
 #'   \code{TRUE}.
 #'
@@ -120,7 +121,7 @@ bootstrap_orthoMTL <- function(X, Y,
                                censored.mat = NULL,
                                n_repeats = 100,
                                n_cores = 2,
-                               seed = 42,
+                               seed = NULL,
                                verbose = TRUE) {
 
   cl <- match.call()
@@ -189,7 +190,7 @@ bootstrap_orthoMTL <- function(X, Y,
     .packages = "orthoMTL"
   ) %dopar% {
 
-    set.seed(i)
+    if (!is.null(seed)) set.seed(seed + i)
     idx <- sample(x = seq_len(n), size = n, replace = TRUE)
 
     fit <- orthoMTL(
@@ -203,7 +204,7 @@ bootstrap_orthoMTL <- function(X, Y,
       schedule     = schedule,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
-      seed         = i,
+      seed         = if (!is.null(seed)) seed + i else NULL,
       verbose      = 0
     )
 
@@ -232,7 +233,7 @@ bootstrap_orthoMTL <- function(X, Y,
     .packages = "orthoMTL"
   ) %dopar% {
 
-    set.seed(i)
+    if (!is.null(seed)) set.seed(seed + i)
     idx <- sample(x = seq_len(n), size = n, replace = FALSE)
 
     fit <- orthoMTL(
@@ -246,7 +247,7 @@ bootstrap_orthoMTL <- function(X, Y,
       schedule     = schedule,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
-      seed         = i,
+      seed         = if (!is.null(seed)) seed + i else NULL,
       verbose      = 0
     )
 

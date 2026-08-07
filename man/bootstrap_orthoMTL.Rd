@@ -17,7 +17,7 @@ bootstrap_orthoMTL(
   censored.mat = NULL,
   n_repeats = 100,
   n_cores = 2,
-  seed = 42,
+  seed = NULL,
   verbose = TRUE
 )
 }
@@ -62,10 +62,11 @@ can substantially cut total runtime; see the \code{schedule} argument of
 \item{n_cores}{Number of cores for parallel execution. Default:
 \code{2}.}
 
-\item{seed}{Base random seed. Each repeat uses \code{set.seed(i)}
-for \code{i} in \code{1:n_repeats} to ensure reproducibility.
-Default: \code{42} (unused directly; individual repeats use
-their index as seed).}
+\item{seed}{Optional base random seed. Default: \code{NULL} (no seed
+is set; repeats vary via the ambient RNG state and the run is not
+reproducible). If supplied, repeat \code{i} uses
+\code{set.seed(seed + i)} for \code{i} in \code{1:n_repeats}, so the
+whole run becomes reproducible while still varying across repeats.}
 
 \item{verbose}{Logical. Print progress information? Default:
 \code{TRUE}.}
