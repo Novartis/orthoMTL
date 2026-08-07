@@ -23,11 +23,9 @@ prior resubmission.)
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
 
-(A "unable to verify current time" NOTE appears in some local check runs due
-to a network-reachability artifact of the time-verification service; it does
-not reproduce on CRAN's own build infrastructure and is omitted above.)
+* New submission (package is not yet on CRAN).
 
 ## Downstream dependencies
 
