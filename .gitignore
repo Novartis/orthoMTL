@@ -23,3 +23,6 @@ Thumbs.db
 # Only the vignette/build byproducts below are ignored.
 /doc/
 /Meta/
+
+# generated, resumable validation results (see validation/ab_k01b_*.R)
+/validation/_results/
