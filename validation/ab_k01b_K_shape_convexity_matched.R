@@ -211,6 +211,10 @@ agg <- do.call(rbind, lapply(
                mse = mean(g$mse), mse_id = mean(g$mse_id))))
 agg$ci[is.na(agg$ci)] <- 0                      # single seed: no spread
 agg$scenario <- factor(agg$scenario, names(SCEN))
+# noise columns by LEVEL (the orthogonal scenario uses a different sd set)
+agg$level <- factor(mapply(function(s, nz) match(nz, SCEN[[as.character(s)]]$noise),
+                           agg$scenario, agg$noise),
+                    levels = 1:3, labels = c("low noise", "mid noise", "high noise"))
 
 # ---- figure -------------------------------------------------------------
 suppressMessages(library(ggplot2))
@@ -220,10 +224,12 @@ p <- ggplot(agg, aes(rho, dmse, colour = shape, fill = shape)) +
   geom_ribbon(aes(ymin = dmse - ci, ymax = dmse + ci), alpha = 0.15, colour = NA) +
   geom_line(linewidth = 0.8) + geom_point(size = 1.4) +
   scale_x_log10(breaks = RHOS, labels = RHOS) +
-  facet_grid(scenario ~ noise, scales = "free_y",
-             labeller = labeller(noise = function(x) paste("noise", x))) +
+  facet_grid(scenario ~ level, scales = "free_y") +
   labs(x = expression(rho == diag(K) / lambda[max](O) ~ " (<1 non-convex, 1 = atomic limit, >1 convex)"),
-       y = "Test-MSE difference vs identity K (paired 95% CI; < 0 = better)") +
+       y = "Test-MSE difference vs identity K (paired 95% CI; < 0 = better)",
+       caption = paste0("Noise sd (low/mid/high): orthogonal 1 / 2.5 / 4; ",
+                        "sliding, blocks, shared 0.5 / 1 / 2.  Best lambda per point ",
+                        "chosen on test MSE (as in the paper).")) +
   theme_bw(base_size = 11) + theme(legend.position = "bottom",
                                    axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(file.path(out_dir, "ab_k01b_K_shape.png"), p, width = 11, height = 10, dpi = 120)
