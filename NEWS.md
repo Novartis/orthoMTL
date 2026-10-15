@@ -1,3 +1,23 @@
+# orthoMTL (development version)
+
+## Bug fixes
+
+* `nnmaxheap_C()`, the projection onto non-negative, non-increasing vectors,
+  returned wrong values in the 0.1.0 release (#12, reported by @D4EM3ON). Any
+  single-element block overwrote the first value of the next block, and a
+  negative final value was not clipped at 0. For example,
+  `nnmaxheap_C(c(5, 3, 3, 1))` returned `5 5 5 1` instead of `5 3 3 1`, and
+  `nnmaxheap_C(c(3, 1, 2, -1))` returned `3 3 3 -1` instead of `3 1.5 1.5 0`.
+  The output was still non-increasing, but its values were inflated, so this
+  changes numerical results wherever the projection is applied:
+  `predict()` on survival fits (`survival = TRUE`) and the scores used by
+  `cv_orthoMTL(survival = TRUE)`, hence its model selection. Regression and
+  classification fits are not affected. Results produced with 0.1.0 on
+  survival data should be recomputed. The projection used in the earlier
+  internal versions of the code behind the published analyses was correct and
+  is not affected. The function is now tested against an isotonic-regression
+  oracle (`stats::isoreg`).
+
 # orthoMTL 0.1.0 (2026-07-10)
 
 ## Renamed from `orthopen` to `orthoMTL`
