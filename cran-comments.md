@@ -2,20 +2,22 @@
 
 ## Submission type
 
-Resubmission of orthoMTL 0.1.0.
+Patch release, orthoMTL 0.1.1 (update of the CRAN release 0.1.0).
 
-This addresses the second round of reviewer feedback (Konstanze Lauseker):
-functions must not call `set.seed()` to a hardcoded value. `orthoMTL()`,
-`cv_orthoMTL()`, `bootstrap_orthoMTL()`, and `simulate_mtl()` all defaulted
-`seed = 42` and called `set.seed()` unconditionally; `seed` now defaults to
-`NULL` and `set.seed()` is only called when the caller supplies a value.
+* Fixes a correctness bug in `nnmaxheap_C()` (the projection onto
+  non-negative, non-increasing vectors), reported externally in
+  https://github.com/Novartis/orthoMTL/issues/12. In 0.1.0 it returned
+  inflated values for some inputs, which affected `predict()` on survival
+  fits and the scoring in `cv_orthoMTL(survival = TRUE)`. Regression and
+  classification fits are not affected. The function is now tested against
+  an isotonic-regression oracle (`stats::isoreg`). Details are in `NEWS.md`.
+* Adds `URL` and `BugReports` fields to `DESCRIPTION`.
 
-(First-round feedback, an invalid `+ file LICENSE` field, was fixed in the
-prior resubmission.)
+The maintainer address is unchanged.
 
 ## Test environments
 
-* Local: Windows 11, R 4.5.2
+* Local: Windows 11, R 4.5.3
 * GitHub Actions:
   * macOS-latest (R release)
   * windows-latest (R release)
@@ -25,20 +27,10 @@ prior resubmission.)
 
 0 errors | 0 warnings | 1 note
 
-* New submission (package is not yet on CRAN).
+* "checking for future file timestamps: unable to verify current time".
+  This comes from the local check machine's clock lookup, not from the
+  package.
 
 ## Downstream dependencies
 
 There are currently no downstream dependencies for this package.
-
-## Additional notes
-
-* The package is the successor to `orthopen`
-  (https://github.com/kevinVervier/orthopen), a small research package
-  never released on CRAN. The relationship is acknowledged in
-  `inst/LICENSE.note`.
-* All exported functions have runnable examples; longer-running examples
-  are wrapped in `\donttest{}`.
-* Vignette optional Cox comparison sections use `eval =
-  requireNamespace(...)` guards so the vignette builds even if
-  `glmnet`/`survival` are not installed at build time.

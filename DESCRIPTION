@@ -1,7 +1,7 @@
 Package: orthoMTL
 Type: Package
 Title: Multi-Task Learning with Orthogonal Constraints
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("Kevin", "Vervier",
         email = "kevin.vervier@novartis.com",
@@ -16,6 +16,8 @@ Description: Fits regularised multi-task learning models where relationships
     Implements the penalty described in Vervier et al. (2014)
     <https://hal.science/hal-00985654>.
 License: GPL-3
+URL: https://github.com/Novartis/orthoMTL
+BugReports: https://github.com/Novartis/orthoMTL/issues
 Encoding: UTF-8
 Imports:
     parallel,
