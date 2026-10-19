@@ -15,6 +15,16 @@ Patch release, orthoMTL 0.1.1 (update of the CRAN release 0.1.0).
 
 The maintainer address is unchanged.
 
+## Why this update is earlier than the usual 1-2 month interval
+
+0.1.0 was published on 2026-08-23. We are aware of the policy on the update
+frequency and are submitting early because 0.1.0 returns wrong results in a
+documented use case: `nnmaxheap_C()`, used by `predict()` on survival fits and
+by the scoring in `cv_orthoMTL(survival = TRUE)`, returned inflated values for
+some inputs, which can change model selection. Users who run survival analyses
+with the CRAN version are affected right now, and the fix is small and covered
+by new tests. We would be grateful for your consideration of this reason.
+
 ## Test environments
 
 * Local: Windows 11, R 4.5.3
