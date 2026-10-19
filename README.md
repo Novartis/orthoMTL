@@ -4,6 +4,8 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/Novartis/orthoMTL/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Novartis/orthoMTL/actions/workflows/R-CMD-check.yaml)
+[![CRAN status](https://www.r-pkg.org/badges/version/orthoMTL)](https://CRAN.R-project.org/package=orthoMTL)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/orthoMTL)](https://CRAN.R-project.org/package=orthoMTL)
 [![License: GPL-3](https://img.shields.io/badge/License-GPL%203-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!-- badges: end -->
 
@@ -31,7 +33,7 @@ The survival extension is described in:
 
 ## Installation
 
-### From CRAN (once released)
+### From CRAN
 
 ```r
 install.packages("orthoMTL")
@@ -145,6 +147,13 @@ If you use orthoMTL in your work, please cite:
   url       = {https://hal.science/hal-00985654}
 }
 ```
+
+## Getting help and reporting bugs
+
+Questions, bug reports and feature requests are welcome on the
+[issue tracker](https://github.com/Novartis/orthoMTL/issues). For a bug,
+a minimal reproducible example (data simulated with `simulate_mtl()` is
+fine) and the output of `sessionInfo()` help a lot.
 
 ## License
 
