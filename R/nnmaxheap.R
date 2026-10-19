@@ -68,12 +68,13 @@ nnmaxheap_C <- function(m) {
   }
 
   # Compute the solution using mean and location
+  # (`i:location[i]` is just `i` for a single-element block; the previous
+  # `(i + 1):location[i]` counted DOWN there and overwrote the next block, and
+  # `while (i < n)` never reached a final singleton block to clip it at 0.)
   i <- 1
-  while (i < n) {
+  while (i <= n) {
     if (x[i] > 0) {
-      for (j in (i + 1):location[i]) {
-        x[j] <- x[i]
-      }
+      x[i:location[i]] <- x[i]
       i <- location[i] + 1
     } else {
       for (j in i:n) {
