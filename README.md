@@ -1,20 +1,30 @@
 # orthoMTL
 
-> Multi-task learning with orthogonal constraints for time-varying survival analysis
+> Multi-task learning with orthogonality and disjoint-support constraints, for regression, classification and survival analysis
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/Novartis/orthoMTL/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/Novartis/orthoMTL/actions/workflows/R-CMD-check.yaml)
+[![CRAN status](https://www.r-pkg.org/badges/version/orthoMTL)](https://CRAN.R-project.org/package=orthoMTL)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/orthoMTL)](https://CRAN.R-project.org/package=orthoMTL)
 [![License: GPL-3](https://img.shields.io/badge/License-GPL%203-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 <!-- badges: end -->
 
 ## Overview
 
-Standard survival models such as Cox proportional hazards assume that each
-feature's effect is constant over time. **orthoMTL** relaxes this assumption
-by recasting survival analysis as a **multi-task learning** problem: binary
-classification tasks are defined at multiple time thresholds, and a shared
-coefficient matrix is estimated with an orthogonality penalty that encourages
-temporally distant tasks to use different features.
+**orthoMTL** fits **multi-task learning** models in which several related
+tasks are learned jointly through a shared coefficient matrix. An
+orthogonality (or disjoint-support) penalty encourages different tasks to
+select different features, which gives sparse, interpretable models when the
+tasks are expected to depend on distinct sets of features.
+
+Three kinds of tasks are supported by the same solver:
+
+- **Regression**: several continuous outcomes.
+- **Classification**: several binary outcomes.
+- **Survival analysis**: time-to-event data, recast as binary classification
+  tasks at several time thresholds (censored entries are masked in the loss).
+  This relaxes the constant-effect assumption of the Cox proportional hazards
+  model and lets the effect of a feature vary over time.
 
 The method is based on:
 
@@ -31,7 +41,7 @@ The survival extension is described in:
 
 ## Installation
 
-### From CRAN (once released)
+### From CRAN
 
 ```r
 install.packages("orthoMTL")
@@ -53,32 +63,11 @@ remotes::install_github("Novartis/orthoMTL")
 
 ## Quick start
 
-```r
-library(orthoMTL)
-
-# Simulate data with known time-varying effects
-sim <- simulate_mtl(n = 200, p = 20, n_signals = 5, seed = 42)
-
-# Convert survival times to binary labels at each threshold
-Y <- create_longitudinal_labels(sim$SurvTime, sim$Event, sim$thresholds)
-W <- create_indicator_matrix(Y)   # censoring mask
-K <- create_constraint_matrix(length(sim$thresholds))
-
-# Fit the model
-fit <- orthoMTL(sim$X, Y, lambda = 1e-3, K = K,
-                survival = TRUE, censored.mat = W)
-summary(fit)
-
-# Visualise coefficients across time thresholds
-plot_heatmap(fit)
-```
+The mode is selected on the solver with the `logistic` / `survival` flags
+(both `FALSE` for regression). Score with the matching metric and, for
+cross-validation, let `cv_orthoMTL()` pick the metric automatically.
 
 ### Regression and classification
-
-The same solver handles plain multi-task regression and classification —
-survival is just one of three modes. Select the mode on the solver with the
-`logistic` / `survival` flags, score with the matching metric, and (for CV)
-let `cv_orthoMTL()` pick the metric automatically.
 
 ```r
 library(orthoMTL)
@@ -104,6 +93,28 @@ accuracy_mtl(sim$Y, predict(fit, newdata = sim$X))
 cv <- cv_orthoMTL(sim$X, sim$Y, logistic = TRUE, survival = FALSE,
                   lambdas = c(1e-3, 1e-2), n_cores = 1)
 cv$best
+```
+
+### Survival analysis
+
+```r
+library(orthoMTL)
+
+# Simulate data with known time-varying effects
+sim <- simulate_mtl(n = 200, p = 20, n_signals = 5, seed = 42)
+
+# Convert survival times to binary labels at each threshold
+Y <- create_longitudinal_labels(sim$SurvTime, sim$Event, sim$thresholds)
+W <- create_indicator_matrix(Y)   # censoring mask
+K <- create_constraint_matrix(length(sim$thresholds))
+
+# Fit the model
+fit <- orthoMTL(sim$X, Y, lambda = 1e-3, K = K,
+                survival = TRUE, censored.mat = W)
+summary(fit)
+
+# Visualise coefficients across time thresholds
+plot_heatmap(fit)
 ```
 
 For a full walkthrough — including cross-validation, bootstrap inference, and
@@ -145,6 +156,13 @@ If you use orthoMTL in your work, please cite:
   url       = {https://hal.science/hal-00985654}
 }
 ```
+
+## Getting help and reporting bugs
+
+Questions, bug reports and feature requests are welcome on the
+[issue tracker](https://github.com/Novartis/orthoMTL/issues). For a bug,
+a minimal reproducible example (data simulated with `simulate_mtl()` is
+fine) and the output of `sessionInfo()` help a lot.
 
 ## License
 
