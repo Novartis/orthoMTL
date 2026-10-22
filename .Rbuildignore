@@ -14,3 +14,4 @@
 ^\.check_out$
 ^\.[^/]*\.R$
 ^\.build_path\.txt$
+^CRAN-SUBMISSION$
