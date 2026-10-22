@@ -1,4 +1,9 @@
-# orthoMTL (development version)
+# orthoMTL 0.1.1 (2026-10-19)
+
+## Package metadata
+
+* `DESCRIPTION` now lists the project page (`URL`) and the issue tracker
+  (`BugReports`), so bug reports can be filed from the CRAN page.
 
 ## Bug fixes
 

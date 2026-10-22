@@ -92,6 +92,14 @@ Vert, J.-P. (2014). On Learning Matrices with Orthogonal Columns or
 Disjoint Supports. \emph{ECML-PKDD 2014}.
 \url{https://hal.science/hal-00985654}
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/Novartis/orthoMTL}
+  \item Report bugs at \url{https://github.com/Novartis/orthoMTL/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Kevin Vervier \email{kevin.vervier@novartis.com}
 
