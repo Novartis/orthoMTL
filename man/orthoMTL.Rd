@@ -19,6 +19,8 @@ orthoMTL(
   logistic = FALSE,
   alpha = 0,
   schedule = c("sqrt", "log", "const", "linear"),
+  penalty = c("K", "omega_O"),
+  gamma = 0,
   survival = FALSE,
   censored.mat = NULL,
   verbose = 0
@@ -85,6 +87,38 @@ decays too aggressively and can stall short of the optimum. Prefer
 changing the schedule changes the optimisation path and therefore the exact
 coefficients, so it should not be altered when reproducing published runs.}
 
+\item{penalty}{Character; the orthogonality penalty. One of:
+\describe{
+  \item{\code{"K"}}{(default) \eqn{\Omega_K(W)^2 = \sum_{s,t} K_{st}
+    |W_s^\top W_t|}, the penalty of Vervier et al. (2014); reproduces all
+    previous results exactly.}
+  \item{\code{"omega_O"}}{\eqn{\Omega_O(W)^2}, the squared atomic norm whose
+    atoms are the matrices with orthogonal columns and unit Frobenius norm.
+    For \eqn{p \ge} \code{numTasks} it equals the value of the max-cut
+    semidefinite program \eqn{\max\{\langle W^\top W, Z\rangle : Z \succeq 0,
+    \mathrm{diag}(Z) = 1\}}, which is solved at every iteration (a
+    \code{numTasks} x \code{numTasks} problem, independent of \eqn{p}); it is
+    convex for any number of tasks and needs no \code{K} (\code{K} is
+    ignored). It coincides with \code{penalty = "K"} with an all-ones
+    \code{K} whenever \eqn{W^\top W} is balanced (some sign flip of the
+    columns makes every entry non-negative), and is smaller otherwise.
+    For \eqn{p <} \code{numTasks} the SDP value is a convex lower bound of
+    \eqn{\Omega_O(W)^2} and a warning is issued. Not available with
+    \code{disjoint = TRUE}: there \eqn{V \ge 0}, so \eqn{V^\top V} is always
+    balanced and \eqn{\Omega_O^2} is exactly \code{penalty = "K"} with
+    all-ones \code{K}.}
+}}
+
+\item{gamma}{A non-negative number, used only with \code{penalty = "omega_O"};
+default \code{0}. Adds a ridge term: the squared penalty becomes
+\eqn{\Omega_O(W)^2 + \gamma \|W\|_F^2 = \max_Z \mathrm{tr}(W (Z + \gamma I) W^\top)},
+convex for every \eqn{\gamma}. \eqn{\Omega_O^2} alone ties shrinkage to
+the price of sharing a feature across tasks (it is \eqn{\|W\|_F^2} plus a
+non-negative sharing term), so it cannot shrink noise features without
+also penalising truly shared ones; \code{gamma} unties them.
+\code{gamma = 0} is pure \eqn{\Omega_O}; large \code{gamma} approaches
+ridge (the role \code{K = I} plays for \code{penalty = "K"}).}
+
 \item{survival}{a logical value indicating whether survival analysis should be performed, default is FALSE}
 
 \item{censored.mat}{a matrix indicating whether observations are censored, used only if survival=TRUE}
@@ -96,6 +130,8 @@ a list containing the following elements:
 \item{B}{a matrix of regression coefficients with dimensions p x numTasks}
 \item{obj}{the final objective function when algorithms stops}
 \item{imax}{the number of iterations}
+\item{sdp_gap}{for \code{penalty = "omega_O"}, a certified upper bound on the
+  gap of the max-cut SDP that evaluates \eqn{\Omega_O(B)^2}; \code{NA} otherwise}
 }
 \description{
 This function solves a multi-task problem where relationships between tasks can be complex

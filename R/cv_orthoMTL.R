@@ -43,6 +43,16 @@
 #'   search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
 #'   trade-offs. Applied uniformly to all configurations (it is not part of the
 #'   tuning grid).
+#' @param penalty Character; the orthogonality penalty passed to
+#'   \code{\link{orthoMTL}} for every fit, \code{"K"} (default) or
+#'   \code{"omega_O"}. With \code{"omega_O"} the penalty does not use
+#'   \code{K}, so \code{diag_vals} is collapsed to its first value (it would
+#'   only duplicate configurations).
+#' @param gammas A numeric vector of non-negative ridge weights \code{gamma}
+#'   to search, used only with \code{penalty = "omega_O"} (see the
+#'   \code{gamma} argument of \code{\link{orthoMTL}}); ignored otherwise.
+#'   Default: \code{0} (pure \eqn{\Omega_O}). With \code{"omega_O"} the
+#'   selected value is returned as \code{best$gamma}.
 #' @param folds An integer vector of length \code{n} assigning each
 #'   training observation to a fold. If \code{NULL}, a 5-fold
 #'   assignment is generated with a warning.
@@ -128,6 +138,8 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                         metric = NULL,
                         disjoint = FALSE,
                         schedule = c("sqrt", "log", "const", "linear"),
+                        penalty = c("K", "omega_O"),
+                        gammas = 0,
                         folds = NULL,
                         n_cores = 2,
                         seed = NULL,
@@ -135,6 +147,13 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
 
   cl <- match.call()
   schedule <- match.arg(schedule)
+  penalty <- match.arg(penalty)
+  # omega_O ignores K, so a diag_val grid would only repeat identical fits
+  if (penalty == "omega_O") diag_vals <- diag_vals[1]
+  if (!is.numeric(gammas) || length(gammas) < 1L || any(!is.finite(gammas)) ||
+      any(gammas < 0)) {
+    stop("'gammas' must be non-negative numbers.", call. = FALSE)
+  }
 
   # ---------------------------
   # Input validation
@@ -203,6 +222,12 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
     diag_val = diag_vals,
     stringsAsFactors = FALSE
   )
+  # omega_O: the gamma ridge knob is a grid dimension (the analogue of
+  # diag_vals); the column only exists for omega_O so penalty = "K" output is
+  # unchanged
+  if (penalty == "omega_O") {
+    config_grid <- merge(config_grid, data.frame(gamma = gammas), by = NULL)
+  }
   n_configs <- nrow(config_grid)
 
   if (verbose) {
@@ -269,6 +294,8 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
         survival     = survival,
         logistic     = logistic,
         schedule     = schedule,
+        penalty      = penalty,
+        gamma        = if (penalty == "omega_O") cfg$gamma else 0,
         censored.mat = if (survival) W.train[idx_train, , drop = FALSE] else NULL,
         seed         = seed,
         verbose      = 0
@@ -328,18 +355,21 @@ cv_orthoMTL <- function(X.train, Y.train, W.train = NULL,
                                    decreasing = scorer$maximize), ]
   rownames(config_grid) <- NULL
 
+  best <- list(
+    lambda   = best_cfg$lambda,
+    alpha    = best_cfg$alpha,
+    stepsize = best_cfg$stepsize,
+    diag_val = best_cfg$diag_val,
+    cv_score = best_cfg$cv_score
+  )
+  if (penalty == "omega_O") best$gamma <- best_cfg$gamma
+
   # ---------------------------
   # Build return object
   # ---------------------------
   structure(
     list(
-      best = list(
-        lambda   = best_cfg$lambda,
-        alpha    = best_cfg$alpha,
-        stepsize = best_cfg$stepsize,
-        diag_val = best_cfg$diag_val,
-        cv_score = best_cfg$cv_score
-      ),
+      best = best,
       results   = config_grid,
       folds     = folds,
       n_configs = n_configs,

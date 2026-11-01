@@ -18,6 +18,8 @@ cv_orthoMTL(
   metric = NULL,
   disjoint = FALSE,
   schedule = c("sqrt", "log", "const", "linear"),
+  penalty = c("K", "omega_O"),
+  gammas = 0,
   folds = NULL,
   n_cores = 2,
   seed = NULL,
@@ -75,6 +77,18 @@ than the default \code{"sqrt"}, which can noticeably speed up the grid
 search; see the \code{schedule} argument of \code{\link{orthoMTL}} for the
 trade-offs. Applied uniformly to all configurations (it is not part of the
 tuning grid).}
+
+\item{penalty}{Character; the orthogonality penalty passed to
+\code{\link{orthoMTL}} for every fit, \code{"K"} (default) or
+\code{"omega_O"}. With \code{"omega_O"} the penalty does not use
+\code{K}, so \code{diag_vals} is collapsed to its first value (it would
+only duplicate configurations).}
+
+\item{gammas}{A numeric vector of non-negative ridge weights \code{gamma}
+to search, used only with \code{penalty = "omega_O"} (see the
+\code{gamma} argument of \code{\link{orthoMTL}}); ignored otherwise.
+Default: \code{0} (pure \eqn{\Omega_O}). With \code{"omega_O"} the
+selected value is returned as \code{best$gamma}.}
 
 \item{folds}{An integer vector of length \code{n} assigning each
 training observation to a fold. If \code{NULL}, a 5-fold

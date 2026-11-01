@@ -39,6 +39,13 @@ print.orthoMTL <- function(x, ...) {
   if (!is.null(x$hyperparameters$alpha) && x$hyperparameters$alpha > 0) {
     pen_str <- paste0(pen_str, ", alpha = ", x$hyperparameters$alpha)
   }
+  # name the penalty only when it is not the historical default
+  if (identical(x$hyperparameters$penalty, "omega_O")) {
+    gam <- x$hyperparameters$gamma
+    pen_str <- paste0(pen_str, ", omega_O",
+                      if (!is.null(gam) && gam > 0) paste0(" + gamma ridge ", gam) else "",
+                      " (SDP gap ", format(x$sdp_gap, digits = 2), ")")
+  }
   cat("Penalty:", pen_str, "\n")
 
   cat("Constraints: disjoint =", x$hyperparameters$disjoint, "\n")

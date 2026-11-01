@@ -46,6 +46,36 @@
 #'   \code{"log"} or \code{"const"} when convergence speed matters; note that
 #'   changing the schedule changes the optimisation path and therefore the exact
 #'   coefficients, so it should not be altered when reproducing published runs.
+#' @param penalty Character; the orthogonality penalty. One of:
+#'   \describe{
+#'     \item{\code{"K"}}{(default) \eqn{\Omega_K(W)^2 = \sum_{s,t} K_{st}
+#'       |W_s^\top W_t|}, the penalty of Vervier et al. (2014); reproduces all
+#'       previous results exactly.}
+#'     \item{\code{"omega_O"}}{\eqn{\Omega_O(W)^2}, the squared atomic norm whose
+#'       atoms are the matrices with orthogonal columns and unit Frobenius norm.
+#'       For \eqn{p \ge} \code{numTasks} it equals the value of the max-cut
+#'       semidefinite program \eqn{\max\{\langle W^\top W, Z\rangle : Z \succeq 0,
+#'       \mathrm{diag}(Z) = 1\}}, which is solved at every iteration (a
+#'       \code{numTasks} x \code{numTasks} problem, independent of \eqn{p}); it is
+#'       convex for any number of tasks and needs no \code{K} (\code{K} is
+#'       ignored). It coincides with \code{penalty = "K"} with an all-ones
+#'       \code{K} whenever \eqn{W^\top W} is balanced (some sign flip of the
+#'       columns makes every entry non-negative), and is smaller otherwise.
+#'       For \eqn{p <} \code{numTasks} the SDP value is a convex lower bound of
+#'       \eqn{\Omega_O(W)^2} and a warning is issued. Not available with
+#'       \code{disjoint = TRUE}: there \eqn{V \ge 0}, so \eqn{V^\top V} is always
+#'       balanced and \eqn{\Omega_O^2} is exactly \code{penalty = "K"} with
+#'       all-ones \code{K}.}
+#'   }
+#' @param gamma A non-negative number, used only with \code{penalty = "omega_O"};
+#'   default \code{0}. Adds a ridge term: the squared penalty becomes
+#'   \eqn{\Omega_O(W)^2 + \gamma \|W\|_F^2 = \max_Z \mathrm{tr}(W (Z + \gamma I) W^\top)},
+#'   convex for every \eqn{\gamma}. \eqn{\Omega_O^2} alone ties shrinkage to
+#'   the price of sharing a feature across tasks (it is \eqn{\|W\|_F^2} plus a
+#'   non-negative sharing term), so it cannot shrink noise features without
+#'   also penalising truly shared ones; \code{gamma} unties them.
+#'   \code{gamma = 0} is pure \eqn{\Omega_O}; large \code{gamma} approaches
+#'   ridge (the role \code{K = I} plays for \code{penalty = "K"}).
 #' @param survival a logical value indicating whether survival analysis should be performed, default is FALSE
 #' @param censored.mat a matrix indicating whether observations are censored, used only if survival=TRUE
 #' @param tol Convergence tolerance. The algorithm stops when the
@@ -55,6 +85,8 @@
 #' \item{B}{a matrix of regression coefficients with dimensions p x numTasks}
 #' \item{obj}{the final objective function when algorithms stops}
 #' \item{imax}{the number of iterations}
+#' \item{sdp_gap}{for \code{penalty = "omega_O"}, a certified upper bound on the
+#'   gap of the max-cut SDP that evaluates \eqn{\Omega_O(B)^2}; \code{NA} otherwise}
 #'
 #' @export
 #'
@@ -95,10 +127,31 @@ orthoMTL <- function(X, Y, lambda = 1,
                      K = NULL, disjoint = FALSE, logistic = FALSE,
                      alpha = 0,
                      schedule = c("sqrt", "log", "const", "linear"),
+                     penalty = c("K", "omega_O"),
+                     gamma = 0,
                      survival = FALSE, censored.mat = NULL,
                      verbose = 0){
   # gradient-step decay schedule (S-02); default "sqrt" = historical behaviour
   schedule <- match.arg(schedule)
+  # orthogonality penalty; default "K" = historical behaviour
+  penalty <- match.arg(penalty)
+  if (!is.numeric(gamma) || length(gamma) != 1L || !is.finite(gamma) || gamma < 0) {
+    stop("gamma must be a single non-negative number", call. = FALSE)
+  }
+  if (gamma > 0 && penalty != "omega_O") {
+    stop("gamma applies to penalty = 'omega_O' only ",
+         "(with penalty = 'K' the ridge weight is the diagonal of K)", call. = FALSE)
+  }
+  if (penalty == "omega_O" && disjoint) {
+    stop("penalty = 'omega_O' is not available with disjoint = TRUE ",
+         "(V >= 0 makes V^T V balanced, so it equals penalty = 'K' with an all-ones K)",
+         call. = FALSE)
+  }
+  if (penalty == "omega_O" && ncol(X) < ncol(Y)) {
+    warning("penalty = 'omega_O' with fewer features than tasks: the SDP value ",
+            "is a convex lower bound of Omega_O(W)^2, not Omega_O(W)^2 itself",
+            call. = FALSE)
+  }
   # only touch the RNG state if the caller explicitly asked for reproducibility
   if (!is.null(seed)) set.seed(seed)
 
@@ -113,6 +166,9 @@ orthoMTL <- function(X, Y, lambda = 1,
 
   # if the K matrix is not defined, set it as identity matrix
   if (is.null(K)) K = diag(1, numTasks)
+  # omega_O: warm start of the max-cut SDP factor, carried across iterations
+  sdp_V = NULL
+  sdp_gap = NA_real_
   # if no initial W_0 was provided, generate a random one.
   if(is.null(W_0)){
     # in the non-disjoint case, we observed that results were stable when starting with the zero matrix
@@ -202,7 +258,22 @@ orthoMTL <- function(X, Y, lambda = 1,
     # elastic-net penalty:
     #   lambda * [ (1 - alpha)/2 * Omega_K(W)^2  +  alpha * ||W||_1 ]
     # alpha = 0 -> pure orthogonality penalty; alpha = 1 -> pure Lasso.
-    pen_obj = (1 - alpha) / 2 * lambda * sum(abs(PEN) * K) +
+    # PEN_dir is the matrix M with subgradient of the squared penalty = 2 W M:
+    # sign(PEN) * K for Omega_K^2, the max-cut SDP optimum Z* for Omega_O^2
+    if (penalty == "K") {
+      pen_sq = sum(abs(PEN) * K)
+      PEN_dir = sign(PEN) * K
+    } else {
+      sdp = .maxcut_sdp(PEN, V0 = sdp_V, certify = FALSE,
+                        tol = 1e-8, max_sweeps = 50, inflate = 1e-6)
+      sdp_V = sdp$V
+      sdp_gap = sdp$gap
+      # gamma ridge: tr(W (Z + gamma I) W^T) = SDP value + gamma * ||W||_F^2
+      pen_sq = sdp$value + gamma * sum(diag(PEN))
+      PEN_dir = sdp$Z
+      if (gamma > 0) diag(PEN_dir) = diag(PEN_dir) + gamma
+    }
+    pen_obj = (1 - alpha) / 2 * lambda * pen_sq +
       alpha * lambda * sum(abs(W_or_V))
 
     # total objective calculation
@@ -238,18 +309,18 @@ orthoMTL <- function(X, Y, lambda = 1,
         gradientW <- -crossprod(X, Y/(1 + exp(pmin(Y * XW_k, 500))))/nrow(X)
       }
       # subgradient of the elastic-net penalty w.r.t. V
-      gradientV <- (1 - alpha) * lambda * V_k %*% (sign(PEN) * K) +
+      gradientV <- (1 - alpha) * lambda * V_k %*% PEN_dir +
         alpha * lambda * sign(V_k)
       norm_gradient <- sqrt(sum((gradientW + gradientV)^2))
     }else {
       # subgradient of data-fit + elastic-net penalty w.r.t. W
       if (!logistic) {
         gradientW <- crossprod(X, LS)/nrow(X) +
-          (1 - alpha) * lambda * W_k %*% (sign(PEN) * K) +
+          (1 - alpha) * lambda * W_k %*% PEN_dir +
           alpha * lambda * sign(W_k)
       }else {
         gradientW <- -crossprod(X, Y/(1 + exp(pmin(Y * XW_k, 500))))/nrow(X) +
-          (1 - alpha) * lambda * W_k %*% (sign(PEN) * K) +
+          (1 - alpha) * lambda * W_k %*% PEN_dir +
           alpha * lambda * sign(W_k)
       }
       norm_gradient <- sqrt(sum((gradientW)^2))
@@ -283,6 +354,8 @@ orthoMTL <- function(X, Y, lambda = 1,
                                Please consider increasing the number of iterations or the step size \n')
   best_obj <- new
   w_star <- W
+  # omega_O: certify the penalty value at the returned coefficients
+  if (penalty == "omega_O") sdp_gap <- .maxcut_sdp(crossprod(w_star), max_sweeps = 5000)$gap
   # Build S3 return object
   structure(
     list(
@@ -291,11 +364,14 @@ orthoMTL <- function(X, Y, lambda = 1,
       obj            = new,
       imax           = imax,
       converged      = imax < max_iter,
+      sdp_gap        = sdp_gap,  # omega_O only: certified bound on the SDP gap at B
       call           = match.call(),
       hyperparameters = list(
         lambda          = lambda,
         alpha           = alpha,
         schedule        = schedule,
+        penalty         = penalty,
+        gamma           = gamma,
         step_size       = step_size,
         tol             = tol,
         stop_no_improve = stop_no_improve,

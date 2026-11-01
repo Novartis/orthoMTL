@@ -13,6 +13,8 @@ bootstrap_orthoMTL(
   K = NULL,
   disjoint = FALSE,
   schedule = c("sqrt", "log", "const", "linear"),
+  penalty = c("K", "omega_O"),
+  gamma = 0,
   survival = FALSE,
   censored.mat = NULL,
   n_repeats = 100,
@@ -49,6 +51,13 @@ Because bootstrap refits the model many times, switching to \code{"log"} or
 \code{"const"} -- which reach the same optimum in far fewer iterations --
 can substantially cut total runtime; see the \code{schedule} argument of
 \code{\link{orthoMTL}} for details.}
+
+\item{penalty}{Character; the orthogonality penalty passed to
+\code{\link{orthoMTL}} for every fit, \code{"K"} (default) or
+\code{"omega_O"}; see the \code{penalty} argument of \code{\link{orthoMTL}}.}
+
+\item{gamma}{Non-negative ridge weight passed to \code{\link{orthoMTL}}
+(used only with \code{penalty = "omega_O"}). Default: \code{0}.}
 
 \item{survival}{Logical. Use censored survival loss? Default:
 \code{FALSE}.}

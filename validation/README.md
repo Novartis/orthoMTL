@@ -80,3 +80,43 @@ encode progression-free, and `cindex_mtl` row-sums across tasks, collapsing
 the time-varying structure (the documented M-01/02/03 metric caveats). Even
 the sign-corrected true coefficients only reach ~0.5, so this is a metric/sim
 ceiling, **not** a solver defect.
+
+## O-01: the atomic norm `Omega_O` (`penalty = "omega_O"`) versus the pairwise `Omega_K`
+
+`ab_omega_o_vs_omega_k.R` (run against a library holding this branch's build; parts and env vars in
+its header). Background and proofs: ai-research `audit/ortho_penalty_screening/README.md` §3.4–3.5
+and the draft note `LaTeX/omega_o_two_summing/` (branch `dr_k`). For `p >= T`,
+`Omega_O(W)^2 = max over correlation matrices Z of tr(W Z W^T)` (a T x T max-cut SDP, solved each
+iteration by a Burer-Monteiro mixing method with a dual certificate, `R/omega_o.R`); it is convex
+for every T and needs no `K`; it equals `penalty = "K"` with an all-ones `K` exactly when `W^T W` is
+balanced. The default path (`penalty = "K"`) is byte-identical to 0.1.1 (checked on survival,
+elastic-net/log-schedule and disjoint fits).
+
+**Run of 2026-11-01** (12 seeds, 3-fold inner CV for every arm, schedule `sqrt`; parts R and F paired
+task-by-task with ab_k01c's stored K arms through a refit-and-compare check that passed on all 144 R
+tasks). Paired test-MSE difference vs identity K (ridge), negative = better:
+
+| scenario | best K practice (C) | `Omega_O` (O) | lasso (L) |
+|---|---|---|---|
+| orthogonal, low noise | -0.075 | -0.039 | +0.027 |
+| orthogonal, mid/high noise | ~0 | +0.02 (n.s./worse) | +0.14 ... +0.24 |
+| sliding | -0.02 ... -0.08 | +0.08 ... +0.23 | -0.27 ... -0.98 |
+| blocks | -0.03 ... -0.06 | +0.22 ... +0.58 | -0.27 ... -0.98 |
+| shared | ~0 (CV retreats to ridge) | +0.37 ... +1.16 | -0.26 ... -1.05 |
+| frustrated (new) | ~0 | +0.01 ... +0.11 | -0.09 ... +0.08 |
+| rotating (new) | ~0 | +0.03 ... +0.42 | -0.17 ... -0.03 |
+| orthogonal20 (T = 20, new) | -0.069 (noise 1) | -0.043 (noise 1) | ~0 ... +0.18 |
+
+Survival (vignette protocol, lambda grid widened to 1e-5..1e-1): all arms indistinguishable
+(C-index differences within +-0.003, n.s.; support AUC near chance at T = 4); `omega_O` CV is ~2x
+faster (no `diag_val` grid).
+
+**Reading.** Plain `Omega_O` helps only on genuinely orthogonal truth and is beaten there by a tuned
+K; it loses badly wherever tasks share features, because `Omega_O^2 = ||W||_F^2 + (sharing term)`
+ties shrinkage to the price of sharing with a fixed ratio (it cannot shrink noise features without
+crushing shared ones). Lasso dominates every sparse scenario, a baseline ab_k01c never had.
+Caveats: the subgradient solver may under-converge `Omega_O` more than `Omega_K` (a
+column-generation solver is planned); every truth here is 5-of-p sparse, so penalty + alpha
+(elastic net) is the fair next comparison. **Next:** part OG, `Omega_O + gamma ||W||_F^2`
+(`gamma =` argument, convex for every gamma, ridge as gamma -> infinity), (gamma, lambda) by CV;
+a 1-seed smoke run brought the deltas to -0.06 ... +0.07; the 12-seed run is in progress.

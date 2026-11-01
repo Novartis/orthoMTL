@@ -26,6 +26,11 @@
 #'   \code{"const"} -- which reach the same optimum in far fewer iterations --
 #'   can substantially cut total runtime; see the \code{schedule} argument of
 #'   \code{\link{orthoMTL}} for details.
+#' @param penalty Character; the orthogonality penalty passed to
+#'   \code{\link{orthoMTL}} for every fit, \code{"K"} (default) or
+#'   \code{"omega_O"}; see the \code{penalty} argument of \code{\link{orthoMTL}}.
+#' @param gamma Non-negative ridge weight passed to \code{\link{orthoMTL}}
+#'   (used only with \code{penalty = "omega_O"}). Default: \code{0}.
 #' @param survival Logical. Use censored survival loss? Default:
 #'   \code{FALSE}.
 #' @param censored.mat A numeric indicator matrix of dimensions
@@ -117,6 +122,8 @@ bootstrap_orthoMTL <- function(X, Y,
                                K = NULL,
                                disjoint = FALSE,
                                schedule = c("sqrt", "log", "const", "linear"),
+                               penalty = c("K", "omega_O"),
+                               gamma = 0,
                                survival = FALSE,
                                censored.mat = NULL,
                                n_repeats = 100,
@@ -126,6 +133,7 @@ bootstrap_orthoMTL <- function(X, Y,
 
   cl <- match.call()
   schedule <- match.arg(schedule)
+  penalty <- match.arg(penalty)
 
   # ---------------------------
   # Input validation
@@ -202,6 +210,8 @@ bootstrap_orthoMTL <- function(X, Y,
       K            = K,
       disjoint     = disjoint,
       schedule     = schedule,
+      penalty      = penalty,
+      gamma        = gamma,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = if (!is.null(seed)) seed + i else NULL,
@@ -245,6 +255,8 @@ bootstrap_orthoMTL <- function(X, Y,
       K            = K,
       disjoint     = disjoint,
       schedule     = schedule,
+      penalty      = penalty,
+      gamma        = gamma,
       survival     = survival,
       censored.mat = if (survival) censored.mat[idx, , drop = FALSE] else NULL,
       seed         = if (!is.null(seed)) seed + i else NULL,
