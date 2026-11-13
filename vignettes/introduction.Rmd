@@ -137,6 +137,11 @@ K <- create_constraint_matrix(length(thresholds))
 K
 ```
 
+This choice of $K$ encodes the assumption that distant thresholds depend on
+different features. Whether that holds is specific to each application; see
+[When Not to Use the Orthogonality Penalty](#when-not-to-use-the-orthogonality-penalty)
+for how to choose $K$ on your own data.
+
 ## Model Fitting
 
 We fit an initial model with a single set of hyperparameters.
@@ -447,6 +452,61 @@ ggplot2::ggplot(combined, ggplot2::aes(threshold, feature, fill = weight)) +
   ggplot2::labs(x = "Threshold (months)", y = NULL, fill = "Normalized\nCoefficient") +
   ggplot2::theme_minimal()
 ```
+
+## When Not to Use the Orthogonality Penalty
+
+The orthogonality term $\Omega_K(W)^2 = \sum_{s,t} K_{st}\,|W_s^\top W_t|$ is
+a strong prior. Every off-diagonal entry $K_{st} > 0$ asserts that tasks $s$
+and $t$ should use (nearly) orthogonal coefficient vectors. The penalty helps
+only when that assertion is true for the pairs that $K$ selects.
+
+**Use it when the tasks are orthogonal by construction and the pairs are
+known.** Examples are a shared "core" task penalised against task-specific
+ones, or outcomes known to be driven by disjoint sets of features. Put
+positive weight on exactly those pairs and zero elsewhere. A penalty on pairs
+that are not truly orthogonal costs accuracy.
+
+**Do not rely on it when the tasks are related.** Nearby time thresholds,
+correlated outcomes and tasks that share features all fall in this case. In
+internal simulation benchmarks (data available upon request), pushing such
+tasks apart did not improve on independent ridge, and adding repulsion on top
+of attraction made things worse. Encouraging related tasks to be *similar*
+(graph-Laplacian "attraction" multi-task learning) performed better.
+
+There is also a simple reason why the gain is small even when the prior is
+correct. With $p$ features and $T$ tasks, orthogonality fixes $T(T-1)/2$
+constraints out of $pT$ parameters, a fraction of about $(T-1)/(2p)$.
+Independent tasks are already close to orthogonal in high dimension (their
+cosine is of order $1/\sqrt{p}$). Even an oracle that knows the true
+orthogonal pairs gains only a few percent once $p \gg T$.
+
+### Alternatives
+
+*Per-task ridge or elastic net, within orthoMTL.* With the default
+$K = I_T$, the penalty reduces to $\Omega_I(W)^2 = \sum_t \|W_t\|_2^2$. This
+is a ridge penalty that applies no coupling between tasks, and $\alpha$ still
+adds the Lasso term:
+
+```{r ridge-alternative, eval = FALSE}
+fit_ridge <- orthoMTL(
+  X = sim$X, Y = Y,
+  lambda = 1e-3, step_size = 0.5,
+  K = diag(length(thresholds)),     # no orthogonality coupling
+  survival = TRUE, censored.mat = W,
+  alpha = 0.5
+)
+```
+
+The time-varying view used throughout this vignette (one coefficient vector
+per threshold) comes from the multi-task formulation, not from the
+orthogonality penalty, so it is preserved here.
+
+*Attraction between related tasks.* Graph-Laplacian or mean-regularised
+multi-task learning (Evgeniou & Pontil, 2004) penalises
+$\sum_{s,t} A_{st}\,\|W_s - W_t\|^2$ for a task graph $A$, for example
+neighbouring thresholds. It is not implemented in orthoMTL. Use a dedicated
+package, such as the `Graph` regularisation in
+[RMTL](https://CRAN.R-project.org/package=RMTL).
 
 ## Conclusion
 
