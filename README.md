@@ -124,6 +124,40 @@ comparison with Cox — see the package vignette:
 vignette("introduction", package = "orthoMTL")
 ```
 
+## When (not) to use the orthogonality penalty
+
+The orthogonality penalty is a strong prior: it pushes the coefficient
+vectors of the task pairs selected by `K` toward orthogonal (or disjoint)
+supports. It helps only when that prior is true.
+
+**Use it** when the tasks are orthogonal *by construction* and you know which
+pairs are. For example, a shared "core" task against task-specific ones, or
+outcomes known to be driven by disjoint sets of features. Encode exactly those
+pairs in `K`. A penalty on pairs that are not truly orthogonal costs accuracy.
+
+**Do not rely on it** when the tasks are related, for example nearby time
+thresholds, correlated outcomes, or tasks that share features. In internal
+simulation benchmarks (data available upon request), pushing such tasks apart
+did not improve on independent ridge, and encouraging related tasks to be
+*similar* (graph-Laplacian "attraction" multi-task learning) performed better. Independent tasks are
+also already close to orthogonal when there are many features, so the
+attainable gain shrinks roughly like `(T - 1) / (2p)` for `T` tasks and `p`
+features.
+
+Alternatives:
+
+- **Per-task ridge / elastic net** with orthoMTL: keep the default
+  `K = diag(T)`. The penalty then reduces to `sum_t ||W_t||^2`, which applies
+  no coupling between tasks, and `alpha` adds the L1 term as usual.
+- **Attraction between related tasks** (graph-Laplacian / mean-regularised
+  multi-task learning, Evgeniou & Pontil 2004) is not implemented in orthoMTL.
+  Use a dedicated package, for example the `Graph` regularisation in
+  [RMTL](https://CRAN.R-project.org/package=RMTL).
+
+The per-threshold view of survival effects (one coefficient vector per time
+threshold) comes from the multi-task formulation itself, not from the
+orthogonality penalty, so it remains available with `K = diag(T)`.
+
 ## Key functions
 
 | Function | Purpose |
