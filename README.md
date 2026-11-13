@@ -135,6 +135,7 @@ vignette("introduction", package = "orthoMTL")
 | `create_longitudinal_labels()` | Survival → binary label matrix |
 | `create_indicator_matrix()` | Censoring indicator matrix |
 | `create_constraint_matrix()` | Diffusion constraint matrix for tasks |
+| `validate_K()` | Check that a constraint matrix gives a convex penalty |
 | `predict()`, `coef()` | Predictions (`type = "link"/"response"/"class"`) and coefficients |
 | `cindex_mtl()` | Survival concordance index |
 | `rmse_mtl()`, `r2_mtl()` | Regression metrics |
